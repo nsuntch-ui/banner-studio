@@ -15,8 +15,11 @@ const enabled = document.querySelector("#enabled");
 const canvas = document.querySelector("#matrix");
 const context = canvas.getContext("2d");
 const status = document.querySelector("#status");
+const connectionBar = document.querySelector("#connection-bar");
+const connectionSource = document.querySelector("#connection-source");
 const connection = document.querySelector("#connection");
 const retry = document.querySelector("#retry");
+const reconnect = document.querySelector("#reconnect");
 const pause = document.querySelector("#pause");
 const scrollSpeed = document.querySelector("#scroll-speed");
 const scrollSpeedValue = document.querySelector("#scroll-speed-value");
@@ -60,6 +63,8 @@ let reading = false;
 let applying = false;
 let sending = null;
 let writeError = "";
+let localDraftEdited = false;
+let localConnectError = false;
 
 function startAnimation(state) {
   return {
@@ -124,22 +129,73 @@ function setControls(config) {
   }
 }
 
+function originHost(origin) {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return "";
+  }
+}
+
 function updateStatus(valid, dirty) {
   mode.textContent = device ? "Banner" : "Simulator";
-  let label = "Live simulation";
-  if (!online) label = device ? "Banner offline · draft kept" : "Offline · edits are previewed as a draft";
-  else if (!valid) label = "Message contains unsupported characters";
-  else if (waitingForRetry) label = writeError || "Reconnected · draft ready to apply";
-  else if (device) {
-    if (dirty || applying) label = "Sending to banner…";
-    else if (deviceState.save === "failed") label = "Live on banner · could not save";
-    else if (deviceState.save === "pending") label = "Live on banner · saving…";
-    else label = "Live on banner";
+  const host = originHost(device ? device.origin : localOrigin);
+  let sourceLabel = !online ? "Offline simulation" : location.protocol === "https:" ? "Web app · Not connected" : "Browser only";
+  let label = "Simulation only — no banner connected";
+  let state = "sim";
+
+  if (device) {
+    const channel = localOrigin ? "Direct local" : "Via web app";
+    sourceLabel = !online ? `${channel} · Offline` : host ? `${channel} · ${host}` : channel;
+    if (!online) {
+      label = host ? `Banner offline (${host}) · draft kept` : "Banner offline · draft kept";
+      state = "offline";
+    } else if (!valid) {
+      label = "Message contains unsupported characters";
+      state = "draft";
+    } else if (waitingForRetry) {
+      label = writeError || "Reconnected · draft ready to apply";
+      state = "draft";
+    } else if (dirty || applying) {
+      label = "Sending to banner…";
+      state = "draft";
+    } else if (deviceState.save === "failed") {
+      label = "Live on banner · could not save";
+      state = "draft";
+    } else if (deviceState.save === "pending") {
+      label = "Live on banner · saving…";
+      state = "live";
+    } else {
+      label = localOrigin ? "Live on banner · direct offline-capable" : "Live on banner · saved";
+      state = "live";
+    }
+  } else if (localOrigin) {
+    sourceLabel = localConnectError ? "Direct local · Offline" : host ? `Direct local · ${host}` : "Direct local";
+    if (localConnectError) {
+      label = host ? `Banner offline (${host}) · editing local draft` : "Banner offline · editing local draft";
+      state = "offline";
+    } else {
+      label = "Connecting to local banner…";
+      state = "draft";
+    }
+  } else if (!online) {
+    label = "Offline simulation · edits previewed as a draft";
+    state = "offline";
+  } else if (!valid) {
+    label = "Message contains unsupported characters";
+    state = "draft";
   }
-  status.dataset.state = !online ? "offline" : dirty || waitingForRetry || !valid ? "draft" : "live";
+
+  status.dataset.state = state;
+  if (connectionBar) connectionBar.dataset.state = state;
+  if (connectionSource && connectionSource.textContent !== sourceLabel) connectionSource.textContent = sourceLabel;
   if (status.textContent !== label) status.textContent = label;
   retry.hidden = !online || !waitingForRetry;
   retry.disabled = !valid;
+  if (reconnect) {
+    reconnect.hidden = !((device && !online) || (localOrigin && !device && localConnectError));
+    reconnect.disabled = reading;
+  }
 }
 
 function updateEditor() {
@@ -252,8 +308,13 @@ async function readDevice() {
 }
 
 async function connectDevice(origin, key) {
+  if (connectButton.disabled) return;
   const startingDraft = draft;
   connectButton.disabled = true;
+  if (origin === localOrigin) {
+    localConnectError = false;
+    updateEditor();
+  }
   deviceFeedback.textContent = "Connecting to banner…";
   try {
     const next = { origin, key: key || await bannerDevice.pair(origin) };
@@ -262,10 +323,12 @@ async function connectDevice(origin, key) {
     deviceState = result;
     applied = result.config;
     online = true;
-    const editedWhileConnecting = !sameConfig(startingDraft, draft);
-    waitingForRetry = editedWhileConnecting;
-    writeError = editedWhileConnecting ? "Connected · draft ready to apply" : "";
-    if (!editedWhileConnecting) setControls(result.config);
+    localConnectError = false;
+    const keepDraft = (origin === localOrigin && localDraftEdited) || !sameConfig(startingDraft, draft);
+    localDraftEdited = false;
+    waitingForRetry = keepDraft;
+    writeError = keepDraft ? "Connected · draft ready to apply" : "";
+    if (!keepDraft) setControls(result.config);
     deviceKey.value = "";
     deviceForm.hidden = true;
     deviceSession.hidden = Boolean(localOrigin);
@@ -277,6 +340,10 @@ async function connectDevice(origin, key) {
     deviceFeedback.textContent = error instanceof TypeError || error.name === "TimeoutError"
       ? "Couldn’t reach the banner. Check home Wi-Fi, the address, and Chrome’s local network permission."
       : error.message;
+    if (origin === localOrigin && !device) {
+      localConnectError = true;
+      updateEditor();
+    }
   } finally {
     connectButton.disabled = false;
   }
@@ -288,6 +355,7 @@ function disconnectDevice() {
   applying = false;
   reading = false;
   online = true;
+  localConnectError = false;
   waitingForRetry = false;
   writeError = "";
   deviceForm.hidden = false;
@@ -298,7 +366,10 @@ function disconnectDevice() {
 }
 
 editor.addEventListener("submit", event => event.preventDefault());
-editor.addEventListener("input", updateEditor);
+editor.addEventListener("input", () => {
+  if (localOrigin && !device) localDraftEdited = true;
+  updateEditor();
+});
 pause.addEventListener("click", () => {
   paused = !paused;
   updateEditor();
@@ -313,6 +384,12 @@ retry.addEventListener("click", () => {
   writeError = "";
   updateEditor();
 });
+if (reconnect) {
+  reconnect.addEventListener("click", () => {
+    if (device) return readDevice();
+    if (localOrigin) return connectDevice(localOrigin).then(() => { showPairing.disabled = !device; });
+  });
+}
 deviceForm.addEventListener("submit", event => {
   event.preventDefault();
   const origin = bannerDevice.address(deviceAddress.value);

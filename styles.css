@@ -23,21 +23,36 @@ h3 { font-size: 1rem; font-weight: 650; }
 
 .workspace { width: min(100% - 2rem, 68rem); margin-inline: auto; padding: 1.6rem 0 3rem; }
 .masthead, .section-heading, .display-footer, .range-label, .simulation-body { display: flex; align-items: center; justify-content: space-between; gap: .85rem; }
-.masthead { padding: .15rem 0 1.35rem; border-bottom: 1px solid var(--border); margin-bottom: 1.55rem; }
+.masthead { padding: .15rem 0 1.1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.15rem; }
 .identity, .preview-heading { display: flex; align-items: center; gap: .75rem; }
 .mark { width: 28px; height: 24px; border-radius: 4px; background: radial-gradient(circle, var(--accent) 2px, transparent 2.5px) 1px 0 / 8px 8px; }
-.mode, .dimensions, output { font: 500 .82rem var(--mono); color: var(--muted); white-space: nowrap; }
-.mode { border: 1px solid var(--border); border-radius: 100px; padding: .34rem .72rem; }
+.mode, .connection-source, .dimensions, output { font: 500 .82rem var(--mono); color: var(--muted); white-space: nowrap; }
+.mode, .connection-source { border: 1px solid var(--border); border-radius: 100px; padding: .28rem .68rem; background: var(--surface); }
+.connection-bar { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 1rem; padding: .85rem 1rem; background: var(--panel); }
+.connection-bar[data-state="live"] { border-color: #46663d; background: linear-gradient(145deg, #172116, var(--panel) 72%); }
+.connection-bar[data-state="offline"] { border-color: #6b4c30; background: linear-gradient(145deg, #211912, var(--panel) 72%); }
+.connection-bar[data-state="live"] .mode { border-color: #5c8a4f; color: #ddffd0; background: #21321d; }
+.connection-bar[data-state="live"] .connection-source { border-color: #46663d; color: #b7d7ab; }
+.connection-bar[data-state="offline"] .mode,
+.connection-bar[data-state="offline"] .connection-source { border-color: #7c5837; color: #ffd4a3; background: #291e14; }
+.connection-bar[data-state="draft"] .mode,
+.connection-bar[data-state="draft"] .connection-source { border-color: #6f5d38; color: #ffe0a8; }
+.connection-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
+.connection-meta { display: grid; gap: .42rem; min-width: 0; }
+.connection-badges { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.connection-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.device-panel { margin-top: .75rem; padding-top: .7rem; border-top: 1px solid var(--border); }
+.device-panel summary { color: var(--muted); font-size: .875rem; }
 .dimensions { border-left: 1px solid var(--border); padding-left: .75rem; }
 
 .display { padding: clamp(1rem, 3vw, 1.65rem); background: linear-gradient(145deg, #1a2319, #111612 72%); border: 1px solid var(--border); border-radius: 1.05rem; }
-.matrix-frame { background: #070b08; border: 1px solid #3b4937; border-radius: .65rem; margin: 1rem 0 .7rem; padding: clamp(.35rem, 1.6vw, 1.2rem); box-shadow: inset 0 4px 16px #0009; overflow: hidden; }
+.matrix-frame { background: #070b08; border: 1px solid #3b4937; border-radius: .65rem; margin: 1rem 0 0; padding: clamp(.35rem, 1.6vw, 1.2rem); box-shadow: inset 0 4px 16px #0009; overflow: hidden; }
 canvas { display: block; width: 100%; height: auto; }
-.display-footer { min-height: 2.7rem; }
 .status { display: flex; align-items: center; gap: .55rem; color: #c6d2c1; font-size: .9rem; }
 .status::before { content: ""; width: .48rem; height: .48rem; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+.status[data-state="sim"]::before { background: #7f8a7d; }
 .status[data-state="offline"]::before, .status[data-state="draft"]::before { background: #ffc98a; }
-.ghost { border: 1px solid #465344; border-radius: .55rem; padding: .5rem .72rem; min-height: 2.65rem; background: #202a20; color: var(--ink); font-size: .875rem; white-space: nowrap; }
+.ghost { border: 1px solid #465344; border-radius: .55rem; padding: .5rem .72rem; min-height: 2.75rem; background: #202a20; color: var(--ink); font-size: .875rem; white-space: nowrap; }
 .ghost:hover { border-color: #70816c; background: #2a3729; }
 
 .editor { display: grid; gap: 1rem; margin-top: 1rem; }

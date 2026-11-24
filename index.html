@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=3451bf754fc8">
+  <link rel="stylesheet" href="styles.css?v=a7ff3c307308">
   <script defer src="font.js?v=81ff6526cd90"></script>
   <script defer src="device.js?v=6f3e2b16cb83"></script>
-  <script defer src="editor.js?v=8eb0256c28b9"></script>
+  <script defer src="editor.js?v=ff90c7654b7d"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -16,8 +16,45 @@
   <main class="workspace">
     <header class="masthead">
       <div class="identity"><span class="mark" aria-hidden="true"></span><h1>Banner Studio</h1></div>
-      <span id="mode" class="mode">Simulator</span>
     </header>
+
+    <section id="connection-bar" class="connection-bar" aria-labelledby="connection-title" data-state="sim">
+      <div class="connection-summary">
+        <div class="connection-meta">
+          <h2 id="connection-title" class="sr-only">Connection status</h2>
+          <div class="connection-badges">
+            <span id="mode" class="mode">Simulator</span>
+            <span id="connection-source" class="connection-source">Browser only</span>
+          </div>
+          <p id="status" class="status" role="status" data-state="sim">Simulation only — no banner connected</p>
+        </div>
+        <div class="connection-actions">
+          <button id="retry" class="ghost" type="button" hidden>Apply draft</button>
+          <button id="reconnect" class="ghost" type="button" hidden>Reconnect</button>
+        </div>
+      </div>
+
+      <details id="device-panel" class="device-panel" hidden>
+        <summary>Connect banner</summary>
+        <form id="device-form" class="device-form">
+          <p class="hint">Use the address and pairing code from the banner’s local editor. Allow local network access when Chrome asks.</p>
+          <div class="fields device-fields">
+            <label class="field">Banner address<input id="device-address" type="text" placeholder="192.168.1.40" inputmode="url" autocomplete="off" spellcheck="false" required></label>
+            <label class="field">Pairing code<input id="device-key" type="password" maxlength="16" autocomplete="off" required></label>
+          </div>
+          <button id="connect-device" class="ghost" type="submit">Connect</button>
+        </form>
+        <div id="local-pairing" class="device-form" hidden>
+          <p class="hint">To connect from the installed app, enter this banner’s address and pairing code there.</p>
+          <button id="show-pairing" class="ghost" type="button">Show pairing code</button>
+          <label id="pairing-field" class="field" hidden>Pairing code<input id="pairing-code" type="text" readonly></label>
+        </div>
+        <div id="device-session" class="device-form" hidden>
+          <button id="disconnect-device" class="ghost" type="button">Disconnect banner</button>
+        </div>
+        <p id="device-feedback" class="hint device-feedback" role="status"></p>
+      </details>
+    </section>
 
     <section class="display" aria-labelledby="preview-title">
       <div class="section-heading">
@@ -27,32 +64,7 @@
       <div class="matrix-frame">
         <canvas id="matrix" width="768" height="96" role="img" aria-label="Simulated 64 by 8 LED display"></canvas>
       </div>
-      <div class="display-footer">
-        <p id="status" class="status" role="status" data-state="live">Live simulation</p>
-        <button id="retry" class="ghost" type="button" hidden>Apply draft</button>
-      </div>
     </section>
-
-    <details id="device-panel" class="simulation" hidden>
-      <summary>Connect banner</summary>
-      <form id="device-form" class="device-form">
-        <p class="hint">Use the address and pairing code from the banner’s local editor. Allow local network access when Chrome asks.</p>
-        <div class="fields device-fields">
-          <label class="field">Banner address<input id="device-address" type="text" placeholder="192.168.1.40" inputmode="url" autocomplete="off" spellcheck="false" required></label>
-          <label class="field">Pairing code<input id="device-key" type="password" maxlength="16" autocomplete="off" required></label>
-        </div>
-        <button id="connect-device" class="ghost" type="submit">Connect</button>
-      </form>
-      <div id="local-pairing" class="device-form" hidden>
-        <p class="hint">To connect from the installed app, enter this banner’s address and pairing code there.</p>
-        <button id="show-pairing" class="ghost" type="button">Show pairing code</button>
-        <label id="pairing-field" class="field" hidden>Pairing code<input id="pairing-code" type="text" readonly></label>
-      </div>
-      <div id="device-session" class="device-form" hidden>
-        <button id="disconnect-device" class="ghost" type="button">Disconnect banner</button>
-      </div>
-      <p id="device-feedback" class="hint device-feedback" role="status"></p>
-    </details>
 
     <form id="editor" class="editor">
       <section class="panel message" aria-labelledby="message-title">
