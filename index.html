@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=8b57b7ed3cdb">
+  <link rel="stylesheet" href="styles.css?v=3451bf754fc8">
   <script defer src="font.js?v=81ff6526cd90"></script>
   <script defer src="device.js?v=6f3e2b16cb83"></script>
-  <script defer src="editor.js?v=b8d364bb940b"></script>
+  <script defer src="editor.js?v=8eb0256c28b9"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -63,10 +63,12 @@
         <p id="message-error" class="error" hidden>Use letters A–Z, numbers, spaces, or . , ! ? * : -</p>
 
         <div class="display-settings">
-          <div class="section-heading"><h3>Display</h3><label class="toggle"><input id="enabled" type="checkbox" aria-label="Display power" checked><span>On</span></label></div>
           <label class="range-label" for="brightness">Brightness <output id="brightness-value" for="brightness">78%</output></label>
           <input id="brightness" type="range" min="0" max="100" value="78">
-          <label id="all-caps-option" class="checkbox"><input id="all-caps" type="checkbox" checked> All caps</label>
+          <div class="display-options">
+            <label class="checkbox">Display<input id="enabled" type="checkbox" aria-label="Display power" checked></label>
+            <label id="all-caps-option" class="checkbox">All caps<input id="all-caps" type="checkbox" checked></label>
+          </div>
         </div>
       </section>
 

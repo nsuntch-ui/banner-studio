@@ -154,7 +154,6 @@ function updateEditor() {
   messageError.hidden = valid;
   count.value = `${message.value.length} / ${message.maxLength}`;
   document.querySelector("#brightness-value").value = `${draft.brightness}%`;
-  enabled.nextElementSibling.textContent = draft.enabled ? "On" : "Off";
   const stationary = draft.motion.speed === 0;
   scrollSpeedValue.value = `${draft.motion.speed} px/s`;
   scrollSpeed.setAttribute("aria-valuetext", stationary ? "0 pixels per second, stationary" : `${draft.motion.speed} pixels per second`);
