@@ -9,6 +9,8 @@ const message = document.querySelector("#message");
 const count = document.querySelector("#count");
 const messageError = document.querySelector("#message-error");
 const brightness = document.querySelector("#brightness");
+const allCaps = document.querySelector("#all-caps");
+const allCapsOption = document.querySelector("#all-caps-option");
 const enabled = document.querySelector("#enabled");
 const canvas = document.querySelector("#matrix");
 const context = canvas.getContext("2d");
@@ -90,7 +92,8 @@ function readEditor() {
     if (input.type === "range") value = input.valueAsNumber;
     settings[input.dataset.setting] = value;
   }
-  return { message: message.value, effect, settings, motion, brightness: brightness.valueAsNumber, enabled: enabled.checked };
+  return { message: message.value, effect, settings, motion, brightness: brightness.valueAsNumber,
+    enabled: enabled.checked, allCaps: allCaps?.checked ?? true };
 }
 
 function validMessage(value) {
@@ -109,6 +112,7 @@ function setControls(config) {
   message.value = config.message;
   brightness.value = config.brightness;
   enabled.checked = config.enabled;
+  if (allCaps) allCaps.checked = config.allCaps ?? true;
   editor.querySelector(`input[name=effect][value="${config.effect}"]`).checked = true;
   motionByEffect.set(config.effect, config.motion);
   activeEffect = undefined;
@@ -140,6 +144,10 @@ function updateStatus(valid, dirty) {
 
 function updateEditor() {
   const previousEffect = previewState().effect;
+  if (allCapsOption) {
+    allCapsOption.hidden = Boolean(device && deviceState.config.allCaps === undefined);
+    if (allCapsOption.hidden) allCaps.checked = true;
+  }
   draft = readEditor();
   const valid = validMessage(draft.message);
   message.setAttribute("aria-invalid", String(!valid));
@@ -342,7 +350,7 @@ function drawText(text, start, getColor, light) {
     if (left + 5 <= 0 || left >= width) continue;
     const glyph = bannerFont[text[index]] ?? bannerFont["?"];
     for (let x = 0; x < glyph.length; x++) {
-      for (let y = 0; y < 7; y++) {
+      for (let y = 0; y < height; y++) {
         if (glyph[x] & (1 << y)) pixel(left + x, y, getColor(left + x, y), light);
       }
     }
@@ -435,7 +443,7 @@ function drawEffect(text, state) {
     const colorSpan = Math.max(textWidth(text) - 1, 1);
     const pulse = settings.pulse ? 0.65 + 0.35 * Math.cos(animation.time * 2) : 1;
     drawText(text, left, (x, y) => {
-      const ratio = settings.direction === "vertical" ? y / 6 : (x - left) / colorSpan;
+      const ratio = settings.direction === "vertical" ? Math.min(y / 6, 1) : (x - left) / colorSpan;
       return start.map((component, index) => component + (end[index] - component) * ratio);
     }, light * pulse);
     return;
@@ -468,7 +476,7 @@ function paint() {
   }
 
   const display = previewState();
-  const text = display.message.toUpperCase();
+  const text = display.allCaps ? display.message.toUpperCase() : display.message;
   if (display.enabled && display.brightness > 0 && text.length) drawEffect(text, display);
 }
 

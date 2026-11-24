@@ -28,7 +28,7 @@ const bannerDevice = (() => {
   function fields(config) {
     const data = new URLSearchParams({
       message: config.message, effect: config.effect, brightness: config.brightness,
-      enabled: Number(config.enabled), scrollSpeed: config.motion.speed,
+      enabled: Number(config.enabled), allCaps: Number(config.allCaps ?? true), scrollSpeed: config.motion.speed,
       scrollDirection: config.motion.direction, alignment: config.motion.alignment,
     });
     for (const name of Object.keys(effects[config.effect])) {
@@ -53,6 +53,7 @@ const bannerDevice = (() => {
         !spec || !settings || !motion || typeof config.message !== "string" ||
         config.message.length > 64 || !/^[A-Za-z0-9 .,!?*:\-]*$/.test(config.message) ||
         typeof config.enabled !== "boolean" || !range(config.brightness, 0, 100) ||
+        (config.allCaps !== undefined && typeof config.allCaps !== "boolean") ||
         !range(motion.speed, 0, config.effect === "typewriter" ? 0 : 100) ||
         !["left", "right", "bounce"].includes(motion.direction) ||
         !["left", "center", "right"].includes(motion.alignment) ||
@@ -95,6 +96,7 @@ const bannerDevice = (() => {
 
   function put(device, base, config) {
     const body = fields(config);
+    if (base.config.allCaps === undefined) body.delete("allCaps");
     body.set("instance", base.instance);
     body.set("revision", base.revision);
     return request(device.origin, "/api/v1/display", {
