@@ -77,6 +77,10 @@ input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--accent);
 .simulation { margin-top: 1.15rem; border: 1px solid var(--border); border-radius: .7rem; padding: .68rem .9rem; }
 .simulation summary { color: var(--muted); font-size: .875rem; }
 .simulation-body { align-items: flex-start; flex-wrap: wrap; margin-top: .65rem; }
+.device-form { display: grid; justify-items: start; gap: .65rem; margin-top: .65rem; }
+.device-fields { width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.device-form input { font: inherit; padding: 0 .65rem; }
+.device-feedback:not(:empty) { margin-top: .65rem; }
 
 .setup-workspace { max-width: 34rem; }
 .setup-panel { display: grid; gap: .85rem; }

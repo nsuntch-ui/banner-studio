@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
   <link rel="stylesheet" href="styles.css">
+  <script defer src="font.js"></script>
+  <script defer src="device.js"></script>
   <script defer src="editor.js"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
@@ -14,7 +16,7 @@
   <main class="workspace">
     <header class="masthead">
       <div class="identity"><span class="mark" aria-hidden="true"></span><h1>Banner Studio</h1></div>
-      <span class="mode">Simulator</span>
+      <span id="mode" class="mode">Simulator</span>
     </header>
 
     <section class="display" aria-labelledby="preview-title">
@@ -30,6 +32,27 @@
         <button id="retry" class="ghost" type="button" hidden>Apply draft</button>
       </div>
     </section>
+
+    <details id="device-panel" class="simulation" hidden>
+      <summary>Connect banner</summary>
+      <form id="device-form" class="device-form">
+        <p class="hint">Use the address and pairing code from the banner’s local editor. Allow local network access when Chrome asks.</p>
+        <div class="fields device-fields">
+          <label class="field">Banner address<input id="device-address" type="text" placeholder="192.168.1.40" inputmode="url" autocomplete="off" spellcheck="false" required></label>
+          <label class="field">Pairing code<input id="device-key" type="password" maxlength="16" autocomplete="off" required></label>
+        </div>
+        <button id="connect-device" class="ghost" type="submit">Connect</button>
+      </form>
+      <div id="local-pairing" class="device-form" hidden>
+        <p class="hint">To connect from the installed app, enter this banner’s address and pairing code there.</p>
+        <button id="show-pairing" class="ghost" type="button">Show pairing code</button>
+        <label id="pairing-field" class="field" hidden>Pairing code<input id="pairing-code" type="text" readonly></label>
+      </div>
+      <div id="device-session" class="device-form" hidden>
+        <button id="disconnect-device" class="ghost" type="button">Disconnect banner</button>
+      </div>
+      <p id="device-feedback" class="hint device-feedback" role="status"></p>
+    </details>
 
     <form id="editor" class="editor">
       <section class="panel message" aria-labelledby="message-title">
@@ -91,7 +114,7 @@
       </section>
     </form>
 
-    <details class="simulation">
+    <details id="simulation" class="simulation">
       <summary>Test connection behavior</summary>
       <div class="simulation-body"><p class="hint">Disconnect and make an edit to see how the app keeps your draft.</p><button id="connection" class="ghost" type="button">Simulate disconnect</button></div>
     </details>

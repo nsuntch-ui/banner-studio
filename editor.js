@@ -3,32 +3,6 @@
 const width = 64;
 const height = 8;
 const cell = 12;
-// Five columns per glyph, with bit zero at the top of each column.
-const font = {
-  " ": [0, 0, 0, 0, 0],
-  A: [0x7e, 0x11, 0x11, 0x11, 0x7e], B: [0x7f, 0x49, 0x49, 0x49, 0x36],
-  C: [0x3e, 0x41, 0x41, 0x41, 0x22], D: [0x7f, 0x41, 0x41, 0x22, 0x1c],
-  E: [0x7f, 0x49, 0x49, 0x49, 0x41], F: [0x7f, 0x09, 0x09, 0x09, 0x01],
-  G: [0x3e, 0x41, 0x49, 0x49, 0x7a], H: [0x7f, 0x08, 0x08, 0x08, 0x7f],
-  I: [0x41, 0x41, 0x7f, 0x41, 0x41], J: [0x20, 0x40, 0x41, 0x3f, 0x01],
-  K: [0x7f, 0x08, 0x14, 0x22, 0x41], L: [0x7f, 0x40, 0x40, 0x40, 0x40],
-  M: [0x7f, 0x02, 0x0c, 0x02, 0x7f], N: [0x7f, 0x04, 0x08, 0x10, 0x7f],
-  O: [0x3e, 0x41, 0x41, 0x41, 0x3e], P: [0x7f, 0x09, 0x09, 0x09, 0x06],
-  Q: [0x3e, 0x41, 0x51, 0x21, 0x5e], R: [0x7f, 0x09, 0x19, 0x29, 0x46],
-  S: [0x46, 0x49, 0x49, 0x49, 0x31], T: [0x01, 0x01, 0x7f, 0x01, 0x01],
-  U: [0x3f, 0x40, 0x40, 0x40, 0x3f], V: [0x1f, 0x20, 0x40, 0x20, 0x1f],
-  W: [0x7f, 0x20, 0x18, 0x20, 0x7f], X: [0x63, 0x14, 0x08, 0x14, 0x63],
-  Y: [0x03, 0x04, 0x78, 0x04, 0x03], Z: [0x61, 0x51, 0x49, 0x45, 0x43],
-  0: [0x3e, 0x45, 0x49, 0x51, 0x3e], 1: [0, 0x42, 0x7f, 0x40, 0],
-  2: [0x62, 0x51, 0x49, 0x49, 0x46], 3: [0x22, 0x41, 0x49, 0x49, 0x36],
-  4: [0x18, 0x14, 0x12, 0x7f, 0x10], 5: [0x2f, 0x49, 0x49, 0x49, 0x31],
-  6: [0x3e, 0x49, 0x49, 0x49, 0x32], 7: [0x01, 0x71, 0x09, 0x05, 0x03],
-  8: [0x36, 0x49, 0x49, 0x49, 0x36], 9: [0x26, 0x49, 0x49, 0x49, 0x3e],
-  ".": [0, 0x60, 0x60, 0, 0], ",": [0, 0x40, 0x30, 0, 0],
-  "!": [0, 0, 0x5f, 0, 0], "?": [0x02, 0x01, 0x59, 0x09, 0x06],
-  ":": [0, 0x36, 0x36, 0, 0], "-": [0, 0x08, 0x08, 0x08, 0],
-  "*": [0, 0x14, 0x08, 0x14, 0],
-};
 
 const editor = document.querySelector("#editor");
 const message = document.querySelector("#message");
@@ -50,6 +24,20 @@ const scrollOptions = document.querySelector("#scroll-options");
 const scrollDirectionField = document.querySelector("#scroll-direction-field");
 const alignmentField = document.querySelector("#alignment-field");
 const clipNote = document.querySelector("#clip-note");
+const mode = document.querySelector("#mode");
+const devicePanel = document.querySelector("#device-panel");
+const deviceForm = document.querySelector("#device-form");
+const deviceAddress = document.querySelector("#device-address");
+const deviceKey = document.querySelector("#device-key");
+const connectButton = document.querySelector("#connect-device");
+const deviceFeedback = document.querySelector("#device-feedback");
+const deviceSession = document.querySelector("#device-session");
+const localPairing = document.querySelector("#local-pairing");
+const showPairing = document.querySelector("#show-pairing");
+const pairingField = document.querySelector("#pairing-field");
+const pairingCode = document.querySelector("#pairing-code");
+const simulation = document.querySelector("#simulation");
+const localOrigin = location.protocol === "http:" ? bannerDevice.address(location.origin) : null;
 const effectPanels = [...document.querySelectorAll("[data-effect-panel]")];
 const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPanel, {
   speed: Number(panel.dataset.scrollDefault ?? 0), direction: "left", alignment: "center",
@@ -64,6 +52,12 @@ let paused = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let animation = startAnimation(draft);
 let lastTick = 0;
 let lastPaint = 0;
+let device = null;
+let deviceState = null;
+let reading = false;
+let applying = false;
+let sending = null;
+let writeError = "";
 
 function startAnimation(state) {
   return {
@@ -100,11 +94,48 @@ function readEditor() {
 }
 
 function validMessage(value) {
-  return /^[A-Za-z0-9 .,!?*:\-]*$/.test(value);
+  return value.length <= 64 && /^[A-Za-z0-9 .,!?*:\-]*$/.test(value);
 }
 
 function previewState() {
   return validMessage(draft.message) ? draft : applied;
+}
+
+function sameConfig(left, right) {
+  return bannerDevice.fields(left).toString() === bannerDevice.fields(right).toString();
+}
+
+function setControls(config) {
+  message.value = config.message;
+  brightness.value = config.brightness;
+  enabled.checked = config.enabled;
+  editor.querySelector(`input[name=effect][value="${config.effect}"]`).checked = true;
+  motionByEffect.set(config.effect, config.motion);
+  activeEffect = undefined;
+  const panel = effectPanels.find(section => section.dataset.effectPanel === config.effect);
+  for (const input of panel.querySelectorAll("[data-setting]")) {
+    const value = config.settings[input.dataset.setting];
+    if (input.type === "checkbox") input.checked = value;
+    else input.value = value;
+  }
+}
+
+function updateStatus(valid, dirty) {
+  mode.textContent = device ? "Banner" : "Simulator";
+  let label = "Live simulation";
+  if (!online) label = device ? "Banner offline · draft kept" : "Offline · edits are previewed as a draft";
+  else if (!valid) label = "Message contains unsupported characters";
+  else if (waitingForRetry) label = writeError || "Reconnected · draft ready to apply";
+  else if (device) {
+    if (dirty || applying) label = "Sending to banner…";
+    else if (deviceState.save === "failed") label = "Live on banner · could not save";
+    else if (deviceState.save === "pending") label = "Live on banner · saving…";
+    else label = "Live on banner";
+  }
+  status.dataset.state = !online ? "offline" : dirty || waitingForRetry || !valid ? "draft" : "live";
+  if (status.textContent !== label) status.textContent = label;
+  retry.hidden = !online || !waitingForRetry;
+  retry.disabled = !valid;
 }
 
 function updateEditor() {
@@ -130,17 +161,21 @@ function updateEditor() {
     }
   }
 
-  if (online && !waitingForRetry && valid) applied = draft;
-  if (JSON.stringify(applied) === JSON.stringify(draft)) waitingForRetry = false;
-
-  status.dataset.state = !online ? "offline" : waitingForRetry || !valid ? "draft" : "live";
-  let messageStatus = "Live simulation";
-  if (!online) messageStatus = "Offline · edits are previewed as a draft";
-  else if (!valid) messageStatus = "Message contains unsupported characters";
-  else if (waitingForRetry) messageStatus = "Reconnected · draft ready to apply";
-  if (status.textContent !== messageStatus) status.textContent = messageStatus;
-  retry.hidden = !online || !waitingForRetry;
-  retry.disabled = !valid;
+  if (!device && online && !waitingForRetry && valid) applied = draft;
+  const dirty = !sameConfig(applied, draft);
+  if (!dirty) waitingForRetry = false;
+  const canSend = device && online && valid && dirty && !waitingForRetry && !applying && !reading;
+  if (!canSend && sending !== null) {
+    clearTimeout(sending);
+    sending = null;
+  }
+  if (canSend && sending === null) {
+    sending = setTimeout(() => {
+      sending = null;
+      return applyDeviceDraft();
+    }, 150);
+  }
+  updateStatus(valid, dirty);
   connection.textContent = online ? "Simulate disconnect" : "Simulate reconnect";
   pause.textContent = paused ? "Play preview" : "Pause preview";
   const display = previewState();
@@ -149,6 +184,110 @@ function updateEditor() {
   if (display.motion.speed === 0) animation.textX = alignedTextX(display);
   canvas.setAttribute("aria-label", `64 by 8 preview, ${display.enabled ? display.message : "display off"}`);
   paint();
+}
+
+async function applyDeviceDraft() {
+  const current = device;
+  if (!current || !online || waitingForRetry || applying || reading ||
+      !validMessage(draft.message) || sameConfig(draft, applied)) return;
+  const submitted = draft;
+  applying = true;
+  try {
+    const result = await bannerDevice.put(current, deviceState, submitted);
+    if (device !== current) return;
+    deviceState = result;
+    applied = result.config;
+    if (result.message) {
+      waitingForRetry = true;
+      writeError = result.message;
+    }
+  } catch (error) {
+    if (device !== current) return;
+    online = error.status === 400;
+    waitingForRetry = true;
+    writeError = online ? error.message : "";
+  } finally {
+    if (device === current) {
+      applying = false;
+      updateEditor();
+    }
+  }
+}
+
+async function readDevice() {
+  const current = device;
+  if (!current || reading || applying) return;
+  reading = true;
+  const previous = deviceState;
+  try {
+    const result = await bannerDevice.get(current);
+    if (device !== current) return;
+    const dirty = !sameConfig(draft, applied);
+    const changed = result.revision !== previous.revision || result.instance !== previous.instance;
+    if (dirty && (changed || !online)) {
+      waitingForRetry = true;
+      writeError = changed ? "Banner settings changed · draft ready to apply" : "";
+    } else if (!dirty && changed) {
+      setControls(result.config);
+    }
+    deviceState = result;
+    applied = result.config;
+    online = true;
+  } catch {
+    if (device !== current) return;
+    online = false;
+  } finally {
+    if (device === current) {
+      reading = false;
+      updateEditor();
+    }
+  }
+}
+
+async function connectDevice(origin, key) {
+  const startingDraft = draft;
+  connectButton.disabled = true;
+  deviceFeedback.textContent = "Connecting to banner…";
+  try {
+    const next = { origin, key: key || await bannerDevice.pair(origin) };
+    const result = await bannerDevice.get(next);
+    device = next;
+    deviceState = result;
+    applied = result.config;
+    online = true;
+    const editedWhileConnecting = !sameConfig(startingDraft, draft);
+    waitingForRetry = editedWhileConnecting;
+    writeError = editedWhileConnecting ? "Connected · draft ready to apply" : "";
+    if (!editedWhileConnecting) setControls(result.config);
+    deviceKey.value = "";
+    deviceForm.hidden = true;
+    deviceSession.hidden = Boolean(localOrigin);
+    simulation.hidden = true;
+    devicePanel.open = false;
+    deviceFeedback.textContent = origin.replace("http://", "");
+    updateEditor();
+  } catch (error) {
+    deviceFeedback.textContent = error instanceof TypeError || error.name === "TimeoutError"
+      ? "Couldn’t reach the banner. Check home Wi-Fi, the address, and Chrome’s local network permission."
+      : error.message;
+  } finally {
+    connectButton.disabled = false;
+  }
+}
+
+function disconnectDevice() {
+  device = null;
+  deviceState = null;
+  applying = false;
+  reading = false;
+  online = true;
+  waitingForRetry = false;
+  writeError = "";
+  deviceForm.hidden = false;
+  deviceSession.hidden = true;
+  simulation.hidden = false;
+  deviceFeedback.textContent = "";
+  updateEditor();
 }
 
 editor.addEventListener("submit", event => event.preventDefault());
@@ -164,7 +303,26 @@ connection.addEventListener("click", () => {
 });
 retry.addEventListener("click", () => {
   waitingForRetry = false;
+  writeError = "";
   updateEditor();
+});
+deviceForm.addEventListener("submit", event => {
+  event.preventDefault();
+  const origin = bannerDevice.address(deviceAddress.value);
+  const key = deviceKey.value.trim().toLowerCase();
+  if (!origin || !bannerDevice.validKey(key)) {
+    deviceFeedback.textContent = "Enter a local banner address and the 16-character pairing code.";
+    return;
+  }
+  connectDevice(origin, key);
+});
+document.querySelector("#disconnect-device").addEventListener("click", disconnectDevice);
+showPairing.addEventListener("click", () => {
+  const visible = pairingField.hidden;
+  pairingField.hidden = !visible;
+  pairingCode.value = visible ? device?.key ?? "" : "";
+  showPairing.textContent = visible ? "Hide pairing code" : "Show pairing code";
+  if (visible) pairingCode.select();
 });
 
 function rgb(hex) {
@@ -182,7 +340,7 @@ function drawText(text, start, getColor, light) {
   for (let index = 0; index < text.length; index++) {
     const left = start + index * 6;
     if (left + 5 <= 0 || left >= width) continue;
-    const glyph = font[text[index]] ?? font["?"];
+    const glyph = bannerFont[text[index]] ?? bannerFont["?"];
     for (let x = 0; x < glyph.length; x++) {
       for (let y = 0; y < 7; y++) {
         if (glyph[x] & (1 << y)) pixel(left + x, y, getColor(left + x, y), light);
@@ -288,7 +446,7 @@ function drawEffect(text, state) {
   const color = rgb(settings.color);
   drawText(revealed, left, () => color, light);
   if (settings.cursor !== "hidden" && animation.time % 0.8 < 0.45) {
-    const cursor = { block: [0x7f, 0x7f, 0x7f], underline: [0x40, 0x40, 0x40], star: font["*"] }[settings.cursor];
+    const cursor = { block: [0x7f, 0x7f, 0x7f], underline: [0x40, 0x40, 0x40], star: bannerFont["*"] }[settings.cursor];
     const cursorStart = left + visible * 6;
     cursor.forEach((column, offset) => {
       for (let y = 0; y < 7; y++) {
@@ -328,4 +486,15 @@ function animate(timestamp) {
 }
 
 updateEditor();
+if (localOrigin) {
+  devicePanel.hidden = false;
+  localPairing.hidden = false;
+  deviceForm.hidden = true;
+  devicePanel.querySelector("summary").textContent = "Pair the installed app";
+  showPairing.disabled = true;
+  connectDevice(localOrigin).then(() => { showPairing.disabled = !device; });
+} else if (location.protocol === "https:") {
+  devicePanel.hidden = false;
+}
+setInterval(readDevice, 2500);
 window.requestAnimationFrame(animate);
