@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Banner Studio</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="editor.js"></script>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="theme-color" content="#0e120f">
+</head>
+<body>
+  <main class="workspace">
+    <header class="masthead">
+      <div class="identity"><span class="mark" aria-hidden="true"></span><h1>Banner Studio</h1></div>
+      <span class="mode">Simulator</span>
+    </header>
+
+    <section class="display" aria-labelledby="preview-title">
+      <div class="section-heading">
+        <div class="preview-heading"><h2 id="preview-title">Display preview</h2><span class="dimensions">64 × 8</span></div>
+        <button class="ghost" id="pause" type="button">Pause preview</button>
+      </div>
+      <div class="matrix-frame">
+        <canvas id="matrix" width="768" height="96" role="img" aria-label="Simulated 64 by 8 LED display"></canvas>
+      </div>
+      <div class="display-footer">
+        <p id="status" class="status" role="status" data-state="live">Live simulation</p>
+        <button id="retry" class="ghost" type="button" hidden>Apply draft</button>
+      </div>
+    </section>
+
+    <form id="editor" class="editor">
+      <section class="panel message" aria-labelledby="message-title">
+        <div class="section-heading"><h2 id="message-title">Message</h2><output id="count" for="message">9 / 64</output></div>
+        <label class="sr-only" for="message">Banner message</label>
+        <input id="message" type="text" maxlength="64" value="HELLO LED" autocomplete="off" spellcheck="false" aria-describedby="message-help message-error">
+        <p id="message-help" class="hint">Letters, numbers, and basic punctuation.</p>
+        <p id="message-error" class="error" hidden>Use letters A–Z, numbers, spaces, or . , ! ? * : -</p>
+
+        <div class="display-settings">
+          <div class="section-heading"><h3>Display</h3><label class="toggle"><input id="enabled" type="checkbox" aria-label="Display power" checked><span>On</span></label></div>
+          <label class="range-label" for="brightness">Brightness <output id="brightness-value" for="brightness">78%</output></label>
+          <input id="brightness" type="range" min="0" max="100" value="78">
+        </div>
+      </section>
+
+      <section class="panel effects" aria-labelledby="effects-title">
+        <h2 id="effects-title">Effect</h2>
+        <fieldset class="effect-picker">
+          <legend class="sr-only">Choose an effect</legend>
+          <label><input type="radio" name="effect" value="marquee" checked><span><strong>Marquee</strong><small>Scrolling text</small></span></label>
+          <label><input type="radio" name="effect" value="gradient"><span><strong>Gradient</strong><small>Two-tone color</small></span></label>
+          <label><input type="radio" name="effect" value="typewriter"><span><strong>Typewriter</strong><small>Letter by letter</small></span></label>
+        </fieldset>
+
+        <div class="effect-controls" data-effect-panel="marquee" data-scroll-default="18">
+          <label class="field color short-field">Text color<input data-setting="color" type="color" value="#aaff73"></label>
+        </div>
+
+        <div class="effect-controls" data-effect-panel="gradient" data-scroll-default="0" hidden>
+          <div class="fields color-fields">
+            <label class="field color">Start color<input data-setting="start" type="color" value="#62e3ff"></label>
+            <label class="field color">End color<input data-setting="end" type="color" value="#ed83ff"></label>
+          </div>
+          <div class="fields inline-fields">
+            <label class="field">Gradient direction<select data-setting="direction"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
+            <label class="checkbox"><input data-setting="pulse" type="checkbox"> Breathing pulse</label>
+          </div>
+        </div>
+
+        <div class="effect-controls" data-effect-panel="typewriter" hidden>
+          <div class="fields">
+            <label class="field">Cursor<select data-setting="cursor"><option value="block">Block</option><option value="underline">Underline</option><option value="star">Star</option><option value="hidden">Hidden</option></select></label>
+            <label class="field color">Text color<input data-setting="color" type="color" value="#ffb878"></label>
+          </div>
+          <label class="range-label" for="typing-speed">Typing speed <output for="typing-speed">6 letters/s</output></label>
+          <input id="typing-speed" data-setting="speed" data-unit=" letters/s" type="range" min="1" max="15" value="6">
+        </div>
+
+        <div class="motion-controls">
+          <div id="scroll-options">
+            <label class="range-label" for="scroll-speed">Scroll speed <output id="scroll-speed-value" for="scroll-speed">18 px/s</output></label>
+            <input id="scroll-speed" type="range" min="0" max="100" value="18">
+          </div>
+          <label class="field short-field" id="scroll-direction-field">Scroll direction<select id="scroll-direction"><option value="left">Scroll left</option><option value="right">Scroll right</option><option value="bounce">Bounce</option></select></label>
+          <label class="field short-field" id="alignment-field" hidden>Text alignment<select id="alignment"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label>
+          <p class="hint" id="clip-note" hidden>Text that extends beyond the display is cropped.</p>
+        </div>
+      </section>
+    </form>
+
+    <details class="simulation">
+      <summary>Test connection behavior</summary>
+      <div class="simulation-body"><p class="hint">Disconnect and make an edit to see how the app keeps your draft.</p><button id="connection" class="ghost" type="button">Simulate disconnect</button></div>
+    </details>
+  </main>
+</body>
+</html>
