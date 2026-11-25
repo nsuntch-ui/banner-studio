@@ -68,6 +68,7 @@ const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPa
   repeat: "continuous", pauseMs: 1500,
 }]));
 const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500 };
+const choiceBindings = [];
 
 let activeEffect;
 let draft = readEditor();
@@ -142,9 +143,49 @@ function applyAppearance(control, key) {
   const update = () => {
     document.documentElement.dataset[key] = control.value;
     savePreference(key, control.value);
+    syncChoices();
   };
   control.addEventListener("change", update);
   update();
+}
+
+function bindChoices() {
+  // Keep one value per setting. The short lists expose that value through native radios.
+  for (const field of document.querySelectorAll("[data-choice-label]")) {
+    const select = field.querySelector("select");
+    const choices = document.createElement("fieldset");
+    const legend = document.createElement("legend");
+    const options = document.createElement("div");
+    choices.className = "choices";
+    legend.textContent = field.dataset.choiceLabel;
+    options.className = "choice-options";
+    choices.append(legend, options);
+    for (const option of select.options) {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      const caption = document.createElement("span");
+      input.type = "radio";
+      input.name = select.id + "-choice";
+      input.value = option.value;
+      input.addEventListener("input", () => {
+        select.value = input.value;
+        if (select.form !== editor) select.dispatchEvent(new Event("change"));
+      });
+      caption.textContent = option.text;
+      label.append(input, caption);
+      options.append(label);
+      choiceBindings.push({ input, option, select });
+    }
+    field.append(choices);
+  }
+}
+
+function syncChoices() {
+  for (const { input, option, select } of choiceBindings) {
+    input.checked = option.selected;
+    input.disabled = select.disabled || option.disabled;
+    input.parentElement.hidden = option.hidden;
+  }
 }
 
 function openSettings() {
@@ -364,6 +405,7 @@ function updateEditor() {
       range.setAttribute("aria-valuetext", value);
     }
   }
+  syncChoices();
 
   if (!device && online && !waitingForRetry && valid) applied = draft;
   const dirty = !sameConfig(applied, draft);
@@ -827,6 +869,15 @@ function animate(timestamp) {
   window.requestAnimationFrame(animate);
 }
 
+bindChoices();
+const tuningButtons = [...document.querySelectorAll("[data-panel-button]")];
+const tuningGroups = [...document.querySelectorAll("section.control-group[data-group]")];
+for (const button of tuningGroups.length ? tuningButtons : []) {
+  button.addEventListener("click", () => {
+    for (const tab of tuningButtons) tab.setAttribute("aria-pressed", String(tab === button));
+    for (const group of tuningGroups) group.hidden = group.dataset.group !== button.dataset.panelButton;
+  });
+}
 applyAppearance(layoutTheme, "layout");
 applyAppearance(colorScheme, "palette");
 updateEditor();

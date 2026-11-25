@@ -1,121 +1,140 @@
 <!doctype html>
-<html lang="en" data-layout="studio" data-palette="forest">
+<html lang="en" data-layout="workbench" data-palette="midnight">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=8481f599bbd6">
+  <link rel="stylesheet" href="styles.css?v=d222250ccdf3">
   <script defer src="font.js?v=81ff6526cd90"></script>
   <script defer src="device.js?v=eebe9ce635ce"></script>
-  <script defer src="editor.js?v=50338ca78a26"></script>
+  <script defer src="editor.js?v=9237ea53a7a8"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
 </head>
-<body class="studio-page">
+<body>
+  <header class="top-bar">
+    <div class="top-inner">
+      <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><div><strong>Banner Studio</strong><span class="studio-family">Untch Family</span></div></div>
+      <button id="settings-button" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="settings-dialog"><span aria-hidden="true">⚙</span></button>
+    </div>
+  </header>
+
   <main class="workspace studio-workspace">
-    <header class="masthead">
-      <div class="identity">
-        <span class="mark" aria-hidden="true"></span>
-        <div><h1>Banner Studio</h1><p class="studio-family">Untch Family</p></div>
-      </div>
-      <button id="settings-button" class="ghost settings-button" type="button" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings-dialog" title="Settings"><span aria-hidden="true">&#9881;&#65038;</span></button>
-    </header>
-
-    <section class="display" aria-labelledby="preview-title">
-      <div class="section-heading">
-        <h2 id="preview-title">Display preview</h2>
-        <button class="ghost" id="pause" type="button">Pause preview</button>
-      </div>
-      <div class="matrix-frame">
-        <canvas id="matrix" width="768" height="96" role="img" aria-label="Simulated 64 by 8 LED display"></canvas>
-      </div>
-      <p id="main-connection-status" class="hint main-connection-status" role="status" hidden></p>
-    </section>
-
     <form id="editor" class="editor">
-      <section class="panel message" aria-labelledby="message-title">
-        <div class="section-heading"><h2 id="message-title">Message</h2><output id="count" for="message">9 / 64</output></div>
-        <label class="sr-only" for="message">Banner message</label>
-        <input id="message" type="text" maxlength="64" value="HELLO LED" autocomplete="off" spellcheck="false" aria-describedby="message-help message-error">
-        <p id="message-help" class="hint">Letters, numbers, and basic punctuation.</p>
-        <p id="message-error" class="error" hidden>Use letters A–Z, numbers, spaces, or . , ! ? * : -</p>
-
-        <div class="display-settings">
-          <label class="range-label" for="brightness">Brightness <output id="brightness-value" for="brightness">78%</output></label>
-          <input id="brightness" type="range" min="0" max="100" value="78">
-          <div class="display-options">
-            <label class="checkbox">Display<input id="enabled" type="checkbox" aria-label="Display power" checked></label>
-            <label id="all-caps-option" class="checkbox">All caps<input id="all-caps" type="checkbox" checked></label>
-          </div>
+      <section class="stage" aria-labelledby="stage-title">
+        <div class="stage-heading">
+          <h1 id="stage-title">Workbench</h1>
+          <p id="main-connection-status" class="preview-status main-connection-status" role="status">Preview only</p>
         </div>
+        <figure class="preview">
+          <div class="preview-toolbar"><figcaption><b>Banner preview</b><span>64 × 8</span></figcaption><button id="pause" type="button">Pause preview</button></div>
+          <div class="matrix-frame"><canvas id="matrix" width="768" height="96" role="img" aria-label="Simulated 64 by 8 LED display">LED banner preview</canvas></div>
+        </figure>
+
+        <div class="message">
+          <div class="control-label"><label for="message">Message</label><output id="count" for="message">8 / 64</output></div>
+          <input id="message" type="text" maxlength="64" value="WELCOME!" autocomplete="off" spellcheck="false" aria-describedby="message-error">
+          <p id="message-error" class="error" hidden>Use letters A–Z, numbers, spaces, or . , ! ? * : -</p>
+        </div>
+
+        <section class="library" aria-labelledby="library-title">
+          <h2 id="library-title">Effect library</h2>
+          <fieldset class="effect-picker" id="effect-picker">
+            <legend class="sr-only">Effect</legend>
+            <label><input type="radio" name="effect" value="marquee" checked><span class="effect-card"><span class="effect-sample sample-marquee" aria-hidden="true">HELLO<span> ›</span></span><strong>Marquee</strong><small>Scrolling text</small></span></label>
+            <label><input type="radio" name="effect" value="gradient"><span class="effect-card"><span class="effect-sample sample-gradient" aria-hidden="true">HELLO</span><strong>Gradient</strong><small>Blend two colors</small></span></label>
+            <label><input type="radio" name="effect" value="typewriter"><span class="effect-card"><span class="effect-sample sample-typewriter" aria-hidden="true">HI<span> ▮</span></span><strong>Typewriter</strong><small>Letter by letter</small></span></label>
+          </fieldset>
+        </section>
       </section>
 
-      <section class="panel effects" aria-labelledby="effects-title">
-        <h2 id="effects-title">Effect</h2>
-        <fieldset class="effect-picker">
-          <legend class="sr-only">Choose an effect</legend>
-          <label><input type="radio" name="effect" value="marquee" checked><span><strong>Marquee</strong><small>Scrolling text</small></span></label>
-          <label><input type="radio" name="effect" value="gradient"><span><strong>Gradient</strong><small>Two-tone color</small></span></label>
-          <label><input type="radio" name="effect" value="typewriter"><span><strong>Typewriter</strong><small>Letter by letter</small></span></label>
-        </fieldset>
-
-        <div class="effect-controls" data-effect-panel="marquee" data-scroll-default="18">
-          <div class="fields color-fields">
-            <label class="field short-field" id="marquee-color-mode-field" hidden>Color style
-              <select id="marquee-color-mode" data-setting="colorMode"><option value="solid">Solid</option><option value="rainbow">Rainbow</option></select>
-            </label>
-            <label class="field color short-field" id="marquee-color-field">Text color<input data-setting="color" type="color" value="#aaff73"></label>
-          </div>
-          <div id="marquee-rainbow-field" hidden>
-            <div class="range-label"><label for="marquee-color-speed">Rainbow speed</label><output for="marquee-color-speed">24 cycles/min</output></div>
-            <input id="marquee-color-speed" data-setting="colorSpeed" data-unit=" cycles/min" type="range" min="0" max="60" step="1" value="24">
-          </div>
+      <section class="tuning" aria-labelledby="tuning-title">
+        <h2 id="tuning-title">Controls</h2>
+        <div class="tuning-nav" aria-label="Control groups">
+          <button type="button" data-panel-button="style" aria-controls="style-controls" aria-pressed="true">Style</button>
+          <button type="button" data-panel-button="motion" aria-controls="motion-controls" aria-pressed="false">Motion</button>
+          <button type="button" data-panel-button="display" aria-controls="display-controls" aria-pressed="false">Display</button>
         </div>
+        <section class="control-group" data-group="style">
+          <div id="style-controls" class="control-content">
+            <div data-effect-panel="marquee" data-scroll-default="18">
+              <div id="marquee-color-mode-field" data-choice-label="Color style">
+                <select id="marquee-color-mode" data-setting="colorMode" hidden><option value="solid">Solid</option><option value="rainbow">Rainbow</option></select>
+              </div>
+              <label id="marquee-color-field" class="swatch">Text color<input data-setting="color" type="color" value="#aaff73"></label>
+              <div id="marquee-rainbow-field" class="range-control" hidden>
+                <div class="control-label"><label for="marquee-color-speed">Rainbow speed</label><output for="marquee-color-speed">24 cycles/min</output></div>
+                <input id="marquee-color-speed" data-setting="colorSpeed" data-unit=" cycles/min" type="range" min="0" max="60" value="24">
+              </div>
+            </div>
 
-        <div class="effect-controls" data-effect-panel="gradient" data-scroll-default="0" hidden>
-          <div class="fields color-fields">
-            <label class="field color">Start color<input data-setting="start" type="color" value="#62e3ff"></label>
-            <label class="field color">End color<input data-setting="end" type="color" value="#ed83ff"></label>
-          </div>
-          <div class="fields inline-fields">
-            <label class="field">Gradient style<select id="gradient-direction" data-setting="direction"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option><option value="color-pulse">Color Pulse</option></select></label>
-            <label class="checkbox"><input data-setting="pulse" type="checkbox"> Brightness breathing</label>
-          </div>
-          <div id="gradient-pulse-field" hidden>
-            <div class="range-label"><label for="gradient-pulse-ms">Color cycle time</label><output for="gradient-pulse-ms">2.5 s</output></div>
-            <input id="gradient-pulse-ms" data-setting="pulseMs" type="range" min="500" max="10000" step="250" value="2500">
-          </div>
-        </div>
+            <div data-effect-panel="gradient" data-scroll-default="0" hidden>
+              <div data-choice-label="Gradient style">
+                <select id="gradient-direction" data-setting="direction" hidden><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option><option value="color-pulse">Color Pulse</option></select>
+              </div>
+              <div class="pair">
+                <label class="swatch">Start color<input data-setting="start" type="color" value="#62e3ff"></label>
+                <label class="swatch">End color<input data-setting="end" type="color" value="#ed83ff"></label>
+              </div>
+              <div id="gradient-pulse-field" class="range-control" hidden>
+                <div class="control-label"><label for="gradient-pulse-ms">Color cycle time</label><output for="gradient-pulse-ms">2.5 s</output></div>
+                <input id="gradient-pulse-ms" data-setting="pulseMs" type="range" min="500" max="10000" step="250" value="2500">
+              </div>
+              <label class="toggle">Brightness breathing<input data-setting="pulse" type="checkbox"></label>
+            </div>
 
-        <div class="effect-controls" data-effect-panel="typewriter" hidden>
-          <div class="fields">
-            <label class="field">Cursor<select data-setting="cursor"><option value="block">Block</option><option value="underline">Underline</option><option value="star">Star</option><option value="hidden">Hidden</option></select></label>
-            <label class="field color">Text color<input data-setting="color" type="color" value="#ffb878"></label>
+            <div data-effect-panel="typewriter" hidden>
+              <div data-choice-label="Cursor">
+                <select id="typing-cursor" data-setting="cursor" hidden><option value="block">Block</option><option value="underline">Underline</option><option value="star">Star</option><option value="hidden">Hidden</option></select>
+              </div>
+              <label class="swatch">Text color<input data-setting="color" type="color" value="#ffb878"></label>
+              <div class="range-control">
+                <div class="control-label"><label for="typing-speed">Typing speed</label><output for="typing-speed">6 letters/s</output></div>
+                <input id="typing-speed" data-setting="speed" data-unit=" letters/s" type="range" min="1" max="15" value="6">
+              </div>
+            </div>
           </div>
-          <label class="range-label" for="typing-speed">Typing speed <output for="typing-speed">6 letters/s</output></label>
-          <input id="typing-speed" data-setting="speed" data-unit=" letters/s" type="range" min="1" max="15" value="6">
-        </div>
+        </section>
 
-        <div class="motion-controls">
-          <div id="scroll-options">
-            <label class="range-label" for="scroll-speed">Scroll speed <output id="scroll-speed-value" for="scroll-speed">18 px/s</output></label>
-            <input id="scroll-speed" type="range" min="0" max="100" value="18">
+        <section class="control-group" data-group="motion" hidden>
+          <div id="motion-controls" class="control-content">
+            <div id="scroll-options" class="range-control">
+              <div class="control-label"><label for="scroll-speed">Scroll speed</label><output id="scroll-speed-value" for="scroll-speed">18 px/s</output></div>
+              <input id="scroll-speed" type="range" min="0" max="100" value="18">
+            </div>
+            <div id="scroll-direction-field" data-choice-label="Scroll direction">
+              <select id="scroll-direction" hidden><option value="left">Left</option><option value="right">Right</option><option value="bounce">Bounce</option></select>
+            </div>
+            <div id="repeat-options" data-choice-label="Repeat">
+              <select id="repeat-mode" hidden><option value="continuous">Continuous</option><option value="pause">With pause</option></select>
+            </div>
+            <div id="repeat-pause-field" class="range-control" hidden>
+              <div class="control-label"><label for="repeat-pause">Pause between passes</label><output id="repeat-pause-value" for="repeat-pause">1.5 s</output></div>
+              <input id="repeat-pause" type="range" min="250" max="12000" step="250" value="1500">
+            </div>
+            <div id="alignment-field" data-choice-label="Text alignment" hidden>
+              <select id="alignment" hidden><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select>
+            </div>
+            <p id="clip-note" class="hint" hidden>Text outside the display is cropped.</p>
           </div>
-          <div class="fields motion-fields">
-            <label class="field short-field" id="scroll-direction-field">Scroll direction<select id="scroll-direction"><option value="left">Scroll left</option><option value="right">Scroll right</option><option value="bounce">Bounce</option></select></label>
-            <label class="field short-field" id="repeat-options" hidden>Repeat<select id="repeat-mode"><option value="continuous">Continuous</option><option value="pause">With pause</option></select></label>
-            <label class="field short-field" id="alignment-field" hidden>Text alignment<select id="alignment"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label>
+        </section>
+
+        <section class="control-group" data-group="display" hidden>
+          <div id="display-controls" class="control-content display-settings">
+            <div class="range-control">
+              <div class="control-label"><label for="brightness">Brightness</label><output id="brightness-value" for="brightness">78%</output></div>
+              <input id="brightness" type="range" min="0" max="100" value="78">
+            </div>
+            <div class="pair display-toggles display-options">
+              <label class="toggle">Power<input id="enabled" type="checkbox" aria-label="Display power" checked></label>
+              <label id="all-caps-option" class="toggle">All caps<input id="all-caps" type="checkbox" checked></label>
+            </div>
           </div>
-          <div id="repeat-pause-field" hidden>
-            <div class="range-label"><label for="repeat-pause">Pause between passes</label><output id="repeat-pause-value" for="repeat-pause">1.5 s</output></div>
-            <input id="repeat-pause" type="range" min="250" max="12000" step="250" value="1500">
-          </div>
-          <p class="hint" id="clip-note" hidden>Text that extends beyond the display is cropped.</p>
-        </div>
+        </section>
       </section>
+
     </form>
-
   </main>
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
     <header class="settings-header">
@@ -126,22 +145,22 @@
     <section class="settings-section" aria-labelledby="appearance-title">
       <h3 id="appearance-title">Appearance</h3>
       <div class="fields appearance-fields">
-        <label class="field">Layout
-          <select id="layout-theme">
-            <option value="studio">Studio</option>
+        <div data-choice-label="Layout">
+          <select id="layout-theme" hidden>
+            <option value="workbench" selected>Workbench</option>
             <option value="compact">Compact</option>
             <option value="focus">Focus</option>
             <option value="console">Console</option>
           </select>
-        </label>
-        <label class="field">Color scheme
-          <select id="color-scheme">
+        </div>
+        <div data-choice-label="Color scheme">
+          <select id="color-scheme" hidden>
             <option value="forest">Forest</option>
-            <option value="midnight">Midnight</option>
+            <option value="midnight" selected>Midnight</option>
             <option value="amber">Amber</option>
             <option value="light">Light</option>
           </select>
-        </label>
+        </div>
       </div>
     </section>
 
