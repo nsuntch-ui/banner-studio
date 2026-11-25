@@ -79,6 +79,7 @@ const offlineModeAddress = document.querySelector("#offline-mode-address");
 const offlineModeError = document.querySelector("#offline-mode-error");
 const localOrigin = location.protocol === "http:" ? bannerDevice.address(location.origin) : null;
 const defaultOfflineOrigin = bannerDevice.address(document.querySelector('meta[name="banner-offline-address"]')?.content ?? "");
+const offlineOriginPreference = defaultOfflineOrigin ? `offline-origin:${defaultOfflineOrigin}` : "offline-origin";
 const effectPanels = [...document.querySelectorAll("[data-effect-panel]")];
 const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPanel, {
   speed: Number(panel.dataset.scrollDefault ?? 0), direction: "left", alignment: "center",
@@ -112,7 +113,7 @@ let connectError = "";
 let openingApp = false;
 let pendingHandoff = readHandoff();
 let rememberedDevice = readRememberedDevice();
-let offlineOrigin = location.protocol === "https:" ? bannerDevice.address(preference("offline-origin") ?? "") : null;
+let offlineOrigin = location.protocol === "https:" ? bannerDevice.address(preference(offlineOriginPreference) ?? "") : null;
 let nextRetry = 0;
 
 function preference(name) {
@@ -167,7 +168,7 @@ function preferDirectAddress(...values) {
 function rememberOfflineOrigin(origin) {
   if (origin && origin !== offlineOrigin) {
     offlineOrigin = origin;
-    savePreference("offline-origin", origin);
+    savePreference(offlineOriginPreference, origin);
   }
 }
 
@@ -351,10 +352,9 @@ function updateStatus(valid, dirty) {
   if (offlineMode && offlineModeUnpaired) {
     const hosted = !localOrigin && location.protocol === "https:";
     const disconnected = !device || !online;
-    const origin = hosted ? (disconnected ? defaultOfflineOrigin : null) ?? preferDirectAddress(
-      device?.origin, pendingHandoff?.origin, offlineOrigin, rememberedDevice?.origin,
-      device?.fallback, rememberedDevice?.fallback
-    ) ?? defaultOfflineOrigin : null;
+    const origin = hosted ? offlineOrigin ?? defaultOfflineOrigin ?? preferDirectAddress(
+      device?.origin, pendingHandoff?.origin, rememberedDevice?.origin, device?.fallback, rememberedDevice?.fallback
+    ) : null;
     const dock = disconnected ? previewOfflineAction : headerOfflineAction;
     if (dock && offlineMode.parentElement !== dock) dock.append?.(offlineMode, offlineModeUnpaired);
     const action = disconnected ? "Open offline mode" : "Offline mode";
@@ -727,7 +727,7 @@ function disconnectDevice() {
   pendingHandoff = null;
   savePreference("connection", null);
   offlineOrigin = null;
-  savePreference("offline-origin", null);
+  savePreference(offlineOriginPreference, null);
   deviceForm.hidden = false;
   deviceSession.hidden = true;
   simulation.hidden = false;
@@ -793,9 +793,6 @@ offlineModeUnpaired?.addEventListener("click", () => {
   if (offlineModeForm) offlineModeForm.hidden = false;
   openSettings();
   offlineModeAddress?.focus();
-});
-offlineMode?.addEventListener("click", () => {
-  rememberOfflineOrigin(bannerDevice.address(offlineMode.href ?? ""));
 });
 offlineModeForm?.addEventListener("submit", event => {
   event.preventDefault();
@@ -1250,7 +1247,7 @@ for (const button of tuningGroups.length ? tuningButtons : []) {
 }
 applyAppearance(layoutTheme, "layout");
 applyAppearance(colorScheme, "palette");
-if (!offlineOrigin && rememberedDevice) {
+if (!offlineOrigin && !defaultOfflineOrigin && rememberedDevice) {
   rememberOfflineOrigin(preferDirectAddress(rememberedDevice.origin, rememberedDevice.fallback));
 }
 updateEditor();
