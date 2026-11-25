@@ -40,6 +40,9 @@ const gradientPulseOption = document.querySelector('#gradient-direction option[v
 const waveAnchorField = document.querySelector("#wave-anchor-field");
 const waveAnchor = document.querySelector("#wave-anchor");
 const sineCounterFields = document.querySelector("#sine-counter-fields");
+const cipherGateField = document.querySelector("#cipher-gate-field");
+const cipherTimedControls = document.querySelector("#cipher-timed-controls");
+const cipherAccentField = document.querySelector("#cipher-accent-field");
 const multiColorCount = document.querySelector("#multi-color-count");
 const extraSwatches = ["third", "fourth", "fifth"].map(slot => document.querySelector("#multi-color-" + slot));
 const multiColorPattern = document.querySelector("#multi-color-pattern");
@@ -67,13 +70,17 @@ const settingsClose = document.querySelector("#settings-close");
 const layoutTheme = document.querySelector("#layout-theme");
 const colorScheme = document.querySelector("#color-scheme");
 const localAppLink = document.querySelector("#local-app-link");
+const offlineMode = document.querySelector("#offline-mode");
+const offlineModeUnpaired = document.querySelector("#offline-mode-unpaired");
+const offlineModeHelp = document.querySelector("#offline-mode-help");
 const localOrigin = location.protocol === "http:" ? bannerDevice.address(location.origin) : null;
 const effectPanels = [...document.querySelectorAll("[data-effect-panel]")];
 const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPanel, {
   speed: Number(panel.dataset.scrollDefault ?? 0), direction: "left", alignment: "center",
   repeat: "continuous", pauseMs: 1500,
 }]));
-const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500, waveAnchor: "text" };
+const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500, waveAnchor: "text",
+  cipherGate: 32, cipherAccent: false };
 const choiceBindings = [];
 const palettePresets = [];
 const expandedEffects = ["rainbow-wave", "multi-color", "sine-wave", "cipher"];
@@ -229,6 +236,8 @@ function startAnimation(state) {
     counterPhase: 0,
     cipherProgress: 0,
     cipherHold: 0,
+    cipherAges: Array(64).fill(-1),
+    cipherUsingGate: false,
     scramblePhase: 0,
     typed: 0,
     holdTime: 0,
@@ -284,6 +293,10 @@ function supportsFiveColors() {
   return !device || Boolean(deviceState?.features?.includes("multi-color-five"));
 }
 
+function supportsCipherPosition() {
+  return !device || Boolean(deviceState?.features?.includes("cipher-position-reveal"));
+}
+
 function supportsDraft(config) {
   return supportsEffect(config.effect) &&
     (config.effect !== "multi-color" || config.settings.colorCount <= 3 || supportsFiveColors());
@@ -316,6 +329,15 @@ function originHost(origin) {
 function updateStatus(valid, dirty) {
   mode.textContent = device ? "Banner" : "Simulator";
   const target = pendingHandoff ?? rememberedDevice;
+  if (offlineMode && offlineModeUnpaired) {
+    const origin = !localOrigin && location.protocol === "https:"
+      ? bannerDevice.address(device?.origin ?? target?.origin ?? "") : null;
+    offlineMode.hidden = !origin;
+    if (origin) offlineMode.href = origin + "/";
+    else offlineMode.removeAttribute?.("href");
+    offlineModeUnpaired.hidden = Boolean(origin || localOrigin || location.protocol !== "https:");
+    if (origin && offlineModeHelp) offlineModeHelp.hidden = true;
+  }
   const host = originHost(device?.origin ?? localOrigin ?? target?.origin);
   let sourceLabel = !online ? "Offline simulation" : location.protocol === "https:" ? "Web app · Not connected" : "Browser only";
   let label = "Simulation only — no banner connected";
@@ -420,6 +442,10 @@ function updateEditor() {
     if (!canAnchorWave) waveAnchor.value = "text";
   }
   draft = readEditor();
+  const positionReveal = draft.effect === "cipher" && draft.motion.speed > 0 && supportsCipherPosition();
+  if (cipherGateField) cipherGateField.hidden = !positionReveal;
+  if (cipherTimedControls) cipherTimedControls.hidden = positionReveal;
+  if (cipherAccentField) cipherAccentField.hidden = !supportsCipherPosition();
   if (!canRepeat) Object.assign(draft.motion, { repeat: "continuous", pauseMs: 1500 });
   if (draft.effect === "marquee" && !canRainbow) {
     Object.assign(draft.settings, { colorMode: "solid", colorSpeed: 24 });
@@ -523,6 +549,11 @@ function updateEditor() {
     animation.passWait = null;
     if (display.motion.direction === "left") animation.textX = width;
     else if (display.motion.direction === "right") animation.textX = -textWidth(display.message);
+    if (display.effect === "cipher" && display.motion.direction !== "bounce") animation.cipherAges.fill(-1);
+  }
+  if (display.effect === "cipher" && animation.cipherUsingGate !== usesCipherGate(display)) {
+    animation.cipherUsingGate = usesCipherGate(display);
+    animation.cipherAges.fill(-1);
   }
   canvas.setAttribute("aria-label", `64 by 8 preview, ${display.enabled ? display.message : "display off"}`);
   paint();
@@ -728,6 +759,10 @@ deviceForm.addEventListener("submit", event => {
   connectDevice(origin, key, { userGesture: true });
 });
 settingsButton?.addEventListener("click", openSettings);
+offlineModeUnpaired?.addEventListener("click", () => {
+  if (offlineModeHelp) offlineModeHelp.hidden = false;
+  openSettings();
+});
 settingsClose?.addEventListener("click", () => settingsDialog.close());
 localAppLink?.addEventListener("click", async () => {
   if (!localOrigin || !device || !online || openingApp) return;
@@ -788,7 +823,13 @@ function alignedTextX(state) {
   return Math.floor(space / 2);
 }
 
-function advanceScroll(state, elapsed) {
+function includeCipherTravel(travel, position, direction) {
+  if (!travel) return;
+  if (direction < 0) travel.left = Math.min(travel.left, position);
+  else travel.right = Math.max(travel.right, position);
+}
+
+function advanceScroll(state, elapsed, travel) {
   const length = textWidth(state.message);
   const { direction, speed } = state.motion;
   const step = speed * elapsed;
@@ -816,17 +857,28 @@ function advanceScroll(state, elapsed) {
   // New text can move the bounce boundary. Travel to it without a jump.
   if (Math.abs(toEdge) > step) {
     animation.textX += Math.sign(toEdge) * step;
+    includeCipherTravel(travel, animation.textX, Math.sign(toEdge));
     return;
   }
+  if (toEdge !== 0) includeCipherTravel(travel, edge, Math.sign(toEdge));
   if (span === 0) {
     animation.textX = edge;
+    includeCipherTravel(travel, edge, animation.bounceDirection);
     return;
   }
   const fromMin = edge - min;
   const phase = animation.bounceDirection > 0 ? fromMin : 2 * span - fromMin;
-  const next = (phase + step - Math.abs(toEdge)) % (2 * span);
+  const remaining = step - Math.abs(toEdge);
+  if (travel) {
+    const rightward = animation.bounceDirection > 0;
+    const untilTurn = rightward ? max - edge : edge - min;
+    if (remaining >= untilTurn) includeCipherTravel(travel, rightward ? max : min, animation.bounceDirection);
+    if (remaining >= untilTurn + span) includeCipherTravel(travel, rightward ? min : max, -animation.bounceDirection);
+  }
+  const next = (phase + remaining) % (2 * span);
   animation.textX = min + Math.min(next, 2 * span - next);
   animation.bounceDirection = next < span ? 1 : -1;
+  includeCipherTravel(travel, animation.textX, animation.bounceDirection);
 }
 
 function advanceRepeatedScroll(state, elapsed) {
@@ -855,6 +907,11 @@ function advanceRepeatedScroll(state, elapsed) {
 
 function advanceAnimation(state, elapsed) {
   animation.time += elapsed;
+  const cipher = state.effect === "cipher";
+  const positionReveal = cipher && usesCipherGate(state);
+  const previousX = animation.textX;
+  const wasWaiting = animation.passWait !== null;
+  const travel = positionReveal ? { left: Infinity, right: -Infinity } : null;
   if (state.effect === "marquee") {
     animation.rainbowPhase = (animation.rainbowPhase + elapsed * (state.settings.colorSpeed ?? 24) / 60) % 1;
   } else if (state.effect === "rainbow-wave") {
@@ -870,14 +927,20 @@ function advanceAnimation(state, elapsed) {
     const counter = animation.counterPhase - direction * elapsed * counterSpeed / 60;
     animation.sinePhase = phase - Math.floor(phase);
     animation.counterPhase = counter - Math.floor(counter);
-  } else if (state.effect === "cipher") {
-    advanceCipher(state.settings, elapsed);
+  } else if (cipher) {
+    if (positionReveal) {
+      animation.scramblePhase = (animation.scramblePhase + elapsed * state.settings.scrambleRate) % 240;
+    } else {
+      const previous = animation.cipherProgress;
+      advanceCipher(state.settings, elapsed);
+      if (animation.cipherProgress < previous) animation.cipherAges.fill(-1);
+    }
   }
   if (state.motion.speed > 0) {
     if (state.motion.repeat === "pause" && state.motion.direction !== "bounce") {
       advanceRepeatedScroll(state, elapsed);
     } else {
-      advanceScroll(state, elapsed);
+      advanceScroll(state, elapsed, travel);
     }
   } else if (state.effect === "typewriter" && state.message.length > 0) {
     if (animation.typed < state.message.length) {
@@ -890,6 +953,53 @@ function advanceAnimation(state, elapsed) {
         animation.holdTime = 0;
       }
     }
+  }
+  if (cipher && animation.passWait === null) {
+    if (positionReveal && state.motion.direction !== "bounce") {
+      const leftward = state.motion.direction === "left";
+      const wrapped = state.motion.repeat === "continuous" &&
+        (leftward ? animation.textX > previousX : animation.textX < previousX);
+      if (wasWaiting || wrapped) animation.cipherAges.fill(-1);
+      includeCipherTravel(travel, animation.textX, leftward ? -1 : 1);
+    }
+    updateCipherLocks(state, elapsed, travel);
+  }
+}
+
+function usesCipherGate(state) {
+  return state.motion.speed > 0 && supportsCipherPosition();
+}
+
+const cipherAccentSeconds = 0.22;
+const cipherAccentColor = [188, 133, 255];
+
+function cipherRank(order, index, count) {
+  const opposite = count - 1 - index;
+  if (order === "outside-in") return Math.min(2 * index, 2 * opposite + 1);
+  if (order === "reverse") return opposite;
+  return index;
+}
+
+function updateCipherLocks(state, elapsed, travel) {
+  const ages = animation.cipherAges;
+  const gate = state.settings.cipherGate ?? 32;
+  const count = travel ? 0 : state.message.replaceAll(" ", "").length;
+  const completed = Math.floor(animation.cipherProgress * count);
+  let index = 0;
+  for (let slot = 0; slot < ages.length; slot++) {
+    const glyph = state.message[slot];
+    if (!glyph || glyph === " ") {
+      ages[slot] = -1;
+      continue;
+    }
+    const center = slot * 6 + 2;
+    const locked = travel
+      ? ages[slot] >= 0 || Math.floor(travel.left) + center <= gate || Math.floor(travel.right) + center >= gate
+      : cipherRank(state.settings.cipherOrder, index, count) < completed;
+    if (!locked) ages[slot] = -1;
+    else if (ages[slot] < 0) ages[slot] = 0;
+    else ages[slot] = Math.min(cipherAccentSeconds, ages[slot] + elapsed);
+    index++;
   }
 }
 
@@ -942,7 +1052,9 @@ function drawSineWave(text, left, light, settings) {
 
 const cipherPools = { symbols: "?!*:.-", hex: "0123456789ABCDEF", digits: "0123456789" };
 
-function drawCipher(text, left, light, settings) {
+function drawCipher(text, left, light, state) {
+  const settings = state.settings;
+  const positionReveal = usesCipherGate(state);
   const count = text.replaceAll(" ", "").length;
   const completed = Math.floor(animation.cipherProgress * count);
   const resolved = rgb(settings.color);
@@ -953,11 +1065,12 @@ function drawCipher(text, left, light, settings) {
   let index = 0;
   const shown = Array.from(text, (glyph, position) => {
     if (glyph === " ") return glyph;
-    const opposite = count - 1 - index;
-    const rank = settings.cipherOrder === "outside-in" ? Math.min(2 * index, 2 * opposite + 1)
-      : settings.cipherOrder === "reverse" ? opposite : index;
-    const locked = rank < completed;
-    colors[position] = locked ? resolved : scrambled;
+    const age = animation.cipherAges[position];
+    const locked = positionReveal ? age >= 0 : cipherRank(settings.cipherOrder, index, count) < completed;
+    const tint = settings.cipherAccent && supportsCipherPosition() && age >= 0
+      ? 0.8 * (1 - age / cipherAccentSeconds) : 0;
+    colors[position] = !locked ? scrambled : tint
+      ? resolved.map((channel, component) => channel + (cipherAccentColor[component] - channel) * tint) : resolved;
     const symbol = pool[(index * 7 + step) % pool.length];
     index++;
     return locked ? glyph : symbol;
@@ -1022,7 +1135,7 @@ function drawEffect(text, state) {
     return;
   }
   if (effect === "cipher") {
-    drawCipher(text, left, light, settings);
+    drawCipher(text, left, light, state);
     return;
   }
 
@@ -1053,6 +1166,10 @@ function paint() {
   }
 
   const display = previewState();
+  if (display.effect === "cipher" && usesCipherGate(display) && display.enabled && display.brightness > 0) {
+    context.fillStyle = "#667486";
+    context.fillRect((display.settings.cipherGate ?? 32) * cell + cell / 2, 0, 1, canvas.height);
+  }
   const text = display.allCaps ? display.message.toUpperCase() : display.message;
   if (display.enabled && display.brightness > 0 && text.length && animation.passWait === null) drawEffect(text, display);
 }

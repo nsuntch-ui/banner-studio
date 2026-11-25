@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=61fb003e7519">
+  <link rel="stylesheet" href="styles.css?v=351258a4ccf9">
   <script defer src="font.js?v=81ff6526cd90"></script>
-  <script defer src="device.js?v=cee180c4158f"></script>
-  <script defer src="editor.js?v=61b97011b674"></script>
+  <script defer src="device.js?v=9feb03d8e02d"></script>
+  <script defer src="editor.js?v=711d109b672a"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -15,8 +15,12 @@
 <body>
   <header class="top-bar">
     <div class="top-inner">
-      <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><div><strong>Banner Studio</strong><span class="studio-family">Untch Family</span></div></div>
-      <button id="settings-button" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="settings-dialog"><span aria-hidden="true">⚙</span></button>
+      <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><div><strong>LED BANNER</strong><span class="studio-family">Untch Family Studio</span></div></div>
+      <div class="top-actions">
+        <a id="offline-mode" class="offline-shortcut" target="_blank" rel="noopener" hidden>Offline mode</a>
+        <button id="offline-mode-unpaired" class="offline-shortcut" type="button" aria-haspopup="dialog" aria-controls="settings-dialog" hidden>Offline mode</button>
+        <button id="settings-button" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="settings-dialog"><span aria-hidden="true">⚙</span></button>
+      </div>
     </div>
   </header>
 
@@ -222,18 +226,24 @@
                   <option value="symbols">Symbols</option><option value="hex">Hex</option><option value="digits">Digits</option>
                 </select>
               </div>
-              <div data-choice-label="Reveal order">
-                <select id="cipher-order" data-setting="cipherOrder" hidden>
-                  <option value="forward">Forward</option><option value="reverse">Reverse</option><option value="outside-in">Outside in</option>
-                </select>
+              <div id="cipher-timed-controls" class="cipher-timed-controls">
+                <div data-choice-label="Reveal order">
+                  <select id="cipher-order" data-setting="cipherOrder" hidden>
+                    <option value="forward">Forward</option><option value="reverse">Reverse</option><option value="outside-in">Outside in</option>
+                  </select>
+                </div>
+                <div class="range-control">
+                  <div class="control-label"><label for="cipher-decode">Decode time</label><output for="cipher-decode">2 s</output></div>
+                  <input id="cipher-decode" data-setting="decodeMs" type="range" min="750" max="6000" step="250" value="2000">
+                </div>
+                <div class="range-control">
+                  <div class="control-label"><label for="cipher-hold">Hold decoded text</label><output for="cipher-hold">2.5 s</output></div>
+                  <input id="cipher-hold" data-setting="holdMs" type="range" min="500" max="10000" step="250" value="2500">
+                </div>
               </div>
-              <div class="range-control">
-                <div class="control-label"><label for="cipher-decode">Decode time</label><output for="cipher-decode">2 s</output></div>
-                <input id="cipher-decode" data-setting="decodeMs" type="range" min="750" max="6000" step="250" value="2000">
-              </div>
-              <div class="range-control">
-                <div class="control-label"><label for="cipher-hold">Hold decoded text</label><output for="cipher-hold">2.5 s</output></div>
-                <input id="cipher-hold" data-setting="holdMs" type="range" min="500" max="10000" step="250" value="2500">
+              <div id="cipher-gate-field" class="range-control" hidden>
+                <div class="control-label"><label for="cipher-reveal-point">Reveal point</label><output for="cipher-reveal-point">32</output></div>
+                <input id="cipher-reveal-point" data-setting="cipherGate" data-unit="" type="range" min="0" max="63" value="32">
               </div>
               <div class="range-control">
                 <div class="control-label"><label for="cipher-scramble-rate">Scramble speed</label><output for="cipher-scramble-rate">6 changes/s</output></div>
@@ -243,6 +253,9 @@
                 <label class="swatch">Decoded color<input data-setting="color" type="color" value="#bbffe4"></label>
                 <label class="swatch">Scrambled color<input data-setting="scrambleColor" type="color" value="#4d87a9"></label>
               </div>
+              <label id="cipher-accent-field" class="toggle compact-toggle" hidden>
+                <span>Color lock</span><input id="cipher-accent" data-setting="cipherAccent" type="checkbox">
+              </label>
             </div>
           </div>
         </section>
@@ -276,9 +289,9 @@
               <div class="control-label"><label for="brightness">Brightness</label><output id="brightness-value" for="brightness">78%</output></div>
               <input id="brightness" type="range" min="0" max="100" value="78">
             </div>
-            <div class="pair display-toggles display-options">
-              <label class="toggle">Power<input id="enabled" type="checkbox" aria-label="Display power" checked></label>
-              <label id="all-caps-option" class="toggle">All caps<input id="all-caps" type="checkbox" checked></label>
+            <div class="display-toggles display-options">
+              <label class="toggle compact-toggle"><span>Power</span><input id="enabled" type="checkbox" aria-label="Display power" checked></label>
+              <label id="all-caps-option" class="toggle compact-toggle"><span>All caps</span><input id="all-caps" type="checkbox" checked></label>
             </div>
           </div>
         </section>
@@ -316,6 +329,7 @@
 
     <section id="connection-bar" class="settings-section connection-bar" aria-labelledby="connection-title" data-state="sim">
       <h3 id="connection-title">Banner connection</h3>
+      <p id="offline-mode-help" class="hint" role="status" hidden>Connect a banner to use Offline mode on your home Wi-Fi.</p>
       <div class="connection-summary">
         <div class="connection-meta">
           <div class="connection-badges">

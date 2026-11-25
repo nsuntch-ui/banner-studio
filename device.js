@@ -57,6 +57,9 @@ const bannerDevice = (() => {
     } else if (config.effect === "multi-color") {
       data.set("color4", config.settings.color4 ?? "#b995ff");
       data.set("color5", config.settings.color5 ?? "#76e3bf");
+    } else if (config.effect === "cipher") {
+      data.set("cipherGate", config.settings.cipherGate ?? 32);
+      data.set("cipherAccent", Number(config.settings.cipherAccent ?? false));
     }
     return data;
   }
@@ -105,7 +108,9 @@ const bannerDevice = (() => {
           !range(settings.sineWidth, 12, 64) || !range(settings.sineDepth, 0, 2) ||
           !range(settings.counterSpeed, 0, 60) || !range(settings.counterStrength, 0, 100))) ||
         (config.effect === "cipher" && (!interval(settings.decodeMs, 750, 6000) ||
-          !interval(settings.holdMs, 500, 10000) || !range(settings.scrambleRate, 2, 10)))) {
+          !interval(settings.holdMs, 500, 10000) || !range(settings.scrambleRate, 2, 10) ||
+          (features.includes("cipher-position-reveal") &&
+            (!range(settings.cipherGate, 0, 63) || typeof settings.cipherAccent !== "boolean"))))) {
       throw new Error("This banner returned an unsupported display state.");
     }
     return state;
@@ -194,6 +199,10 @@ const bannerDevice = (() => {
     if (!features.includes("multi-color-five")) {
       body.delete("color4");
       body.delete("color5");
+    }
+    if (!features.includes("cipher-position-reveal")) {
+      body.delete("cipherGate");
+      body.delete("cipherAccent");
     }
     body.set("instance", base.instance);
     body.set("revision", base.revision);
