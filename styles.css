@@ -215,9 +215,13 @@ input { accent-color: var(--accent); }
 .range-control input { width: 100%; min-height: 30px; margin: .22rem 0 0; }
 .swatch, .toggle { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: .45rem; font-weight: 600; }
 .swatch input { width: 48px; height: 38px; border: 1px solid var(--line); border-radius: .5rem; padding: 3px; background: var(--surface); cursor: pointer; }
-.palette-swatches { display: flex; gap: .45rem; margin-top: .35rem; }
+.palette-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 2.75rem), 1fr));
+  gap: .45rem;
+  margin-top: .35rem;
+}
 .palette-swatch {
-  flex: 1 1 0;
   min-width: 0;
   display: grid;
   gap: .2rem;

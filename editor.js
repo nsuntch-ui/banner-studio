@@ -39,7 +39,8 @@ const gradientDirection = document.querySelector("#gradient-direction");
 const gradientPulseOption = document.querySelector('#gradient-direction option[value="color-pulse"]');
 const waveAnchorField = document.querySelector("#wave-anchor-field");
 const waveAnchor = document.querySelector("#wave-anchor");
-const multiColorThird = document.querySelector("#multi-color-third");
+const multiColorCount = document.querySelector("#multi-color-count");
+const extraSwatches = ["third", "fourth", "fifth"].map(slot => document.querySelector("#multi-color-" + slot));
 const multiColorPattern = document.querySelector("#multi-color-pattern");
 const scrollOptions = document.querySelector("#scroll-options");
 const scrollDirectionField = document.querySelector("#scroll-direction-field");
@@ -272,6 +273,15 @@ function supportsEffect(effect) {
   return !device || !expandedEffects.includes(effect) || Boolean(deviceState?.effects?.includes(effect));
 }
 
+function supportsFiveColors() {
+  return !device || Boolean(deviceState?.features?.includes("multi-color-five"));
+}
+
+function supportsDraft(config) {
+  return supportsEffect(config.effect) &&
+    (config.effect !== "multi-color" || config.settings.colorCount <= 3 || supportsFiveColors());
+}
+
 function setControls(config) {
   message.value = config.message;
   brightness.value = config.brightness;
@@ -282,7 +292,7 @@ function setControls(config) {
   activeEffect = undefined;
   const panel = effectPanels.find(section => section.dataset.effectPanel === config.effect);
   for (const input of panel.querySelectorAll("[data-setting]")) {
-    const value = config.settings[input.dataset.setting] ?? effectDefaults[input.dataset.setting];
+    const value = config.settings[input.dataset.setting] ?? effectDefaults[input.dataset.setting] ?? input.defaultValue;
     if (input.type === "checkbox") input.checked = value;
     else input.value = value;
   }
@@ -313,8 +323,8 @@ function updateStatus(valid, dirty) {
     } else if (!valid) {
       label = "Message contains unsupported characters";
       state = "draft";
-    } else if (!supportsEffect(draft.effect)) {
-      label = "This effect requires newer banner firmware";
+    } else if (!supportsDraft(draft)) {
+      label = "These settings require newer banner firmware";
       state = "draft";
     } else if (waitingForRetry) {
       label = writeError || "Reconnected · draft ready to apply";
@@ -363,14 +373,14 @@ function updateStatus(valid, dirty) {
     if (!online || localConnectError || connectError) brief = device || localOrigin || target || connectError
       ? "Banner offline" : "Preview offline";
     else if (!device) brief = "Preview only";
-    else if (!supportsEffect(draft.effect)) brief = "Firmware update needed for this effect";
+    else if (!supportsDraft(draft)) brief = "Firmware update needed";
     else if (waitingForRetry) brief = "Draft ready in Settings";
     else if (deviceState.save === "failed") brief = "Could not save to banner";
     mainConnectionStatus.hidden = !brief;
     if (mainConnectionStatus.textContent !== brief) mainConnectionStatus.textContent = brief;
   }
   retry.hidden = !online || !waitingForRetry;
-  retry.disabled = !valid || !supportsEffect(draft.effect);
+  retry.disabled = !valid || !supportsDraft(draft);
   if (reconnect) {
     reconnect.hidden = device ? online : !target && !localConnectError;
     reconnect.disabled = reading || connectButton.disabled;
@@ -432,8 +442,17 @@ function updateEditor() {
   if (marqueeColorField) marqueeColorField.hidden = rainbow;
   if (marqueeRainbowField) marqueeRainbowField.hidden = !rainbow;
   if (gradientPulseField) gradientPulseField.hidden = draft.settings.direction !== "color-pulse";
-  if (multiColorThird) multiColorThird.hidden = draft.settings.colorCount !== 3;
-  if (multiColorPattern?.parentElement) multiColorPattern.parentElement.hidden = draft.settings.colorCount !== 3;
+  if (multiColorCount?.options) {
+    const maximum = supportsFiveColors() ? 5 : 3;
+    for (const option of multiColorCount.options) {
+      option.disabled = Number(option.value) > maximum;
+      option.hidden = option.disabled && !option.selected;
+    }
+  }
+  extraSwatches.forEach((swatch, index) => {
+    if (swatch) swatch.hidden = index + 3 > (draft.settings.colorCount ?? 0);
+  });
+  if (multiColorPattern?.parentElement) multiColorPattern.parentElement.hidden = !(draft.settings.colorCount > 2);
   if (draft.effect === "multi-color") {
     for (const { button, colors, dots } of palettePresets) {
       const matches = colors.slice(0, draft.settings.colorCount)
@@ -462,7 +481,7 @@ function updateEditor() {
   if (!device && online && !waitingForRetry && valid) applied = draft;
   const dirty = !sameConfig(applied, draft);
   if (!dirty) waitingForRetry = false;
-  const canSend = device && online && valid && supportsEffect(draft.effect) &&
+  const canSend = device && online && valid && supportsDraft(draft) &&
     dirty && !waitingForRetry && !applying && !reading;
   if (!canSend && sending !== null) {
     clearTimeout(sending);
@@ -502,7 +521,7 @@ function updateEditor() {
 
 async function applyDeviceDraft() {
   const current = device;
-  if (!current || !online || waitingForRetry || applying || reading || !supportsEffect(draft.effect) ||
+  if (!current || !online || waitingForRetry || applying || reading || !supportsDraft(draft) ||
       !validMessage(draft.message) || sameConfig(draft, applied)) return;
   const submitted = draft;
   applying = true;
@@ -896,8 +915,8 @@ function drawEffect(text, state) {
     return;
   }
   if (effect === "multi-color") {
-    const colors = [rgb(settings.color1), rgb(settings.color2), rgb(settings.color3)];
     const count = settings.colorCount;
+    const colors = Array.from({ length: count }, (_, index) => rgb(settings["color" + (index + 1)]));
     const mirror = settings.colorPattern === "mirror";
     const period = mirror ? 2 * count - 2 : count;
     let colorIndex = -1;

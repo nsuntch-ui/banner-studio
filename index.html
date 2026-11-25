@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=248bf9298695">
+  <link rel="stylesheet" href="styles.css?v=19fb05149722">
   <script defer src="font.js?v=81ff6526cd90"></script>
-  <script defer src="device.js?v=f8cbf8e8d29a"></script>
-  <script defer src="editor.js?v=edeaa4174f70"></script>
+  <script defer src="device.js?v=3a7ddeae5323"></script>
+  <script defer src="editor.js?v=621a4adc802b"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -119,34 +119,59 @@
             </div>
 
             <div data-effect-panel="multi-color" data-scroll-default="18" hidden>
+              <div data-choice-label="Number of colors">
+                <select id="multi-color-count" data-setting="colorCount" hidden>
+                  <option value="2">Two</option>
+                  <option value="3" selected>Three</option>
+                  <option value="4">Four</option>
+                  <option value="5">Five</option>
+                </select>
+              </div>
               <fieldset class="choices">
                 <legend>Palette</legend>
                 <div class="palette-swatches">
                   <label class="palette-swatch"><input data-setting="color1" type="color" value="#ffcc73"><span>Color 1</span></label>
                   <label class="palette-swatch"><input data-setting="color2" type="color" value="#ff789f"><span>Color 2</span></label>
                   <label class="palette-swatch" id="multi-color-third"><input data-setting="color3" type="color" value="#70b7ff"><span>Color 3</span></label>
+                  <label class="palette-swatch" id="multi-color-fourth" hidden><input data-setting="color4" type="color" value="#b995ff"><span>Color 4</span></label>
+                  <label class="palette-swatch" id="multi-color-fifth" hidden><input data-setting="color5" type="color" value="#76e3bf"><span>Color 5</span></label>
                 </div>
               </fieldset>
               <fieldset id="multi-color-presets" class="choices">
                 <legend>Presets</legend>
                 <div class="palette-presets-list">
-                  <button class="palette-preset" type="button" aria-pressed="false" data-colors="#ffcc73 #ff789f #70b7ff">
-                    <span class="palette-preset-colors"><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span></span>
+                  <button class="palette-preset" type="button" aria-pressed="false" data-colors="#ffcc73 #ff789f #70b7ff #b995ff #76e3bf">
+                    <span class="palette-preset-colors" aria-hidden="true">
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch hidden></span>
+                      <span class="palette-preset-dot" data-preset-swatch hidden></span>
+                    </span>
                     Candy
                   </button>
-                  <button class="palette-preset" type="button" aria-pressed="false" data-colors="#40e0c6 #72baff #ece8ff">
-                    <span class="palette-preset-colors"><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span></span>
+                  <button class="palette-preset" type="button" aria-pressed="false" data-colors="#40e0c6 #72baff #ece8ff #7393ff #aef3f4">
+                    <span class="palette-preset-colors" aria-hidden="true">
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch hidden></span>
+                      <span class="palette-preset-dot" data-preset-swatch hidden></span>
+                    </span>
                     Tide
                   </button>
-                  <button class="palette-preset" type="button" aria-pressed="false" data-colors="#ff654d #ffb36b #ffe0a6">
-                    <span class="palette-preset-colors"><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span><span class="palette-preset-dot" data-preset-swatch aria-hidden="true"></span></span>
+                  <button class="palette-preset" type="button" aria-pressed="false" data-colors="#ff654d #ffb36b #ffe0a6 #fc924f #f7c060">
+                    <span class="palette-preset-colors" aria-hidden="true">
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch></span>
+                      <span class="palette-preset-dot" data-preset-swatch hidden></span>
+                      <span class="palette-preset-dot" data-preset-swatch hidden></span>
+                    </span>
                     Ember
                   </button>
                 </div>
               </fieldset>
-              <div data-choice-label="Number of colors">
-                <select id="multi-color-count" data-setting="colorCount" hidden><option value="2">Two</option><option value="3" selected>Three</option></select>
-              </div>
               <div data-choice-label="Apply colors">
                 <select id="multi-color-grouping" data-setting="colorGrouping" hidden><option value="letter">By letter</option><option value="word">By word</option></select>
               </div>

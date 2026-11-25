@@ -12,7 +12,7 @@ const bannerDevice = (() => {
       speed: /^(?:[1-9]|1[0-5])$/ },
     "rainbow-wave": { waveSpeed: /^\d+$/, waveWidth: /^\d+$/, waveSaturation: /^\d+$/,
       waveDirection: /^(left|right)$/ },
-    "multi-color": { color1: color, color2: color, color3: color, colorCount: /^[23]$/,
+    "multi-color": { color1: color, color2: color, color3: color, colorCount: /^[2-5]$/,
       colorGrouping: /^(letter|word)$/, colorPattern: /^(cycle|mirror)$/ },
   };
 
@@ -50,6 +50,9 @@ const bannerDevice = (() => {
       data.set("pulseMs", config.settings.pulseMs ?? 2500);
     } else if (config.effect === "rainbow-wave") {
       data.set("waveAnchor", config.settings.waveAnchor ?? "text");
+    } else if (config.effect === "multi-color") {
+      data.set("color4", config.settings.color4 ?? "#b995ff");
+      data.set("color5", config.settings.color5 ?? "#76e3bf");
     }
     return data;
   }
@@ -91,7 +94,9 @@ const bannerDevice = (() => {
           !range(settings.waveWidth, 8, 64) || !range(settings.waveSaturation, 0, 100) ||
           ((features.includes("rainbow-wave-anchor") || settings.waveAnchor !== undefined) &&
             !["text", "display"].includes(settings.waveAnchor)))) ||
-        (config.effect === "multi-color" && !range(settings.colorCount, 2, 3))) {
+        (config.effect === "multi-color" && (features.includes("multi-color-five")
+          ? !range(settings.colorCount, 2, 5) || !color.test(settings.color4) || !color.test(settings.color5)
+          : !range(settings.colorCount, 2, 3)))) {
       throw new Error("This banner returned an unsupported display state.");
     }
     return state;
@@ -177,6 +182,10 @@ const bannerDevice = (() => {
     }
     if (!features.includes("gradient-color-pulse")) body.delete("pulseMs");
     if (!features.includes("rainbow-wave-anchor")) body.delete("waveAnchor");
+    if (!features.includes("multi-color-five")) {
+      body.delete("color4");
+      body.delete("color5");
+    }
     body.set("instance", base.instance);
     body.set("revision", base.revision);
     return request(device.origin, "/api/v1/display", {
