@@ -48,6 +48,8 @@ const bannerDevice = (() => {
       data.set("colorSpeed", config.settings.colorSpeed ?? 24);
     } else if (config.effect === "gradient") {
       data.set("pulseMs", config.settings.pulseMs ?? 2500);
+    } else if (config.effect === "rainbow-wave") {
+      data.set("waveAnchor", config.settings.waveAnchor ?? "text");
     }
     return data;
   }
@@ -86,7 +88,9 @@ const bannerDevice = (() => {
           !interval(settings.pulseMs, 500, 10000)) ||
         (config.effect === "typewriter" && typeof settings.speed !== "number") ||
         (config.effect === "rainbow-wave" && (!range(settings.waveSpeed, 0, 60) ||
-          !range(settings.waveWidth, 8, 64) || !range(settings.waveSaturation, 0, 100))) ||
+          !range(settings.waveWidth, 8, 64) || !range(settings.waveSaturation, 0, 100) ||
+          ((features.includes("rainbow-wave-anchor") || settings.waveAnchor !== undefined) &&
+            !["text", "display"].includes(settings.waveAnchor)))) ||
         (config.effect === "multi-color" && !range(settings.colorCount, 2, 3))) {
       throw new Error("This banner returned an unsupported display state.");
     }
@@ -172,6 +176,7 @@ const bannerDevice = (() => {
       body.delete("colorSpeed");
     }
     if (!features.includes("gradient-color-pulse")) body.delete("pulseMs");
+    if (!features.includes("rainbow-wave-anchor")) body.delete("waveAnchor");
     body.set("instance", base.instance);
     body.set("revision", base.revision);
     return request(device.origin, "/api/v1/display", {

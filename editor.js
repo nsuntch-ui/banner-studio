@@ -37,6 +37,8 @@ const marqueeRainbowField = document.querySelector("#marquee-rainbow-field");
 const gradientPulseField = document.querySelector("#gradient-pulse-field");
 const gradientDirection = document.querySelector("#gradient-direction");
 const gradientPulseOption = document.querySelector('#gradient-direction option[value="color-pulse"]');
+const waveAnchorField = document.querySelector("#wave-anchor-field");
+const waveAnchor = document.querySelector("#wave-anchor");
 const multiColorThird = document.querySelector("#multi-color-third");
 const multiColorPattern = document.querySelector("#multi-color-pattern");
 const scrollOptions = document.querySelector("#scroll-options");
@@ -69,8 +71,9 @@ const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPa
   speed: Number(panel.dataset.scrollDefault ?? 0), direction: "left", alignment: "center",
   repeat: "continuous", pauseMs: 1500,
 }]));
-const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500 };
+const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500, waveAnchor: "text" };
 const choiceBindings = [];
+const palettePresets = [];
 const expandedEffects = ["rainbow-wave", "multi-color"];
 
 let activeEffect;
@@ -188,6 +191,22 @@ function syncChoices() {
     input.checked = option.selected;
     input.disabled = select.disabled || option.disabled;
     input.parentElement.hidden = option.hidden;
+  }
+}
+
+function bindPalettePresets() {
+  const buttons = document.querySelectorAll("#multi-color-presets button[data-colors]");
+  if (!buttons.length) return;
+  const swatches = [...document.querySelectorAll('[data-effect-panel="multi-color"] input[type="color"]')];
+  for (const button of buttons) {
+    const colors = button.dataset.colors.split(" ");
+    const dots = [...button.querySelectorAll("[data-preset-swatch]")];
+    dots.forEach((dot, index) => dot.style.setProperty("--swatch-color", colors[index]));
+    palettePresets.push({ button, colors, dots });
+    button.addEventListener("click", () => {
+      swatches.slice(0, draft.settings.colorCount).forEach((input, index) => { input.value = colors[index]; });
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
   }
 }
 
@@ -369,6 +388,7 @@ function updateEditor() {
   const canRepeat = !device || features.includes("repeat");
   const canRainbow = !device || features.includes("marquee-rainbow");
   const canColorPulse = !device || features.includes("gradient-color-pulse");
+  const canAnchorWave = !device || features.includes("rainbow-wave-anchor");
   if (gradientPulseOption) {
     gradientPulseOption.hidden = !canColorPulse;
     gradientPulseOption.disabled = !canColorPulse;
@@ -377,6 +397,10 @@ function updateEditor() {
   if (allCapsOption) {
     allCapsOption.hidden = Boolean(device && deviceState.config.allCaps === undefined);
     if (allCapsOption.hidden) allCaps.checked = true;
+  }
+  if (waveAnchorField) {
+    waveAnchorField.hidden = !canAnchorWave;
+    if (!canAnchorWave) waveAnchor.value = "text";
   }
   draft = readEditor();
   if (!canRepeat) Object.assign(draft.motion, { repeat: "continuous", pauseMs: 1500 });
@@ -410,6 +434,14 @@ function updateEditor() {
   if (gradientPulseField) gradientPulseField.hidden = draft.settings.direction !== "color-pulse";
   if (multiColorThird) multiColorThird.hidden = draft.settings.colorCount !== 3;
   if (multiColorPattern?.parentElement) multiColorPattern.parentElement.hidden = draft.settings.colorCount !== 3;
+  if (draft.effect === "multi-color") {
+    for (const { button, colors, dots } of palettePresets) {
+      const matches = colors.slice(0, draft.settings.colorCount)
+        .every((color, index) => color === draft.settings["color" + (index + 1)]);
+      button.setAttribute("aria-pressed", String(matches));
+      dots.forEach((dot, index) => { dot.hidden = index >= draft.settings.colorCount; });
+    }
+  }
 
   for (const panel of effectPanels) {
     panel.hidden = panel.dataset.effectPanel !== draft.effect;
@@ -447,6 +479,13 @@ function updateEditor() {
   pause.textContent = paused ? "Play preview" : "Pause preview";
   const display = previewState();
   if (display.effect !== previous.effect) animation = startAnimation(display);
+  else if (display.effect === "rainbow-wave" &&
+      (display.settings.waveAnchor === "display") !== (previous.settings.waveAnchor === "display")) {
+    // Keep the visible color field continuous when switching its coordinate system.
+    const sign = display.settings.waveAnchor === "display" ? -1 : 1;
+    const phase = animation.rainbowPhase + sign * Math.floor(animation.textX) / display.settings.waveWidth;
+    animation.rainbowPhase = phase - Math.floor(phase);
+  }
   // At zero speed the user controls placement. Resuming starts at that position.
   if (display.motion.speed === 0) {
     animation.textX = alignedTextX(display);
@@ -851,7 +890,8 @@ function drawEffect(text, state) {
   }
   if (effect === "rainbow-wave") {
     const saturation = settings.waveSaturation / 100;
-    drawText(text, left, x => rainbowColor(animation.rainbowPhase + (x - left) / settings.waveWidth)
+    const anchor = settings.waveAnchor === "display" ? 0 : left;
+    drawText(text, left, x => rainbowColor(animation.rainbowPhase + (x - anchor) / settings.waveWidth)
       .map(component => 255 + (component - 255) * saturation), light);
     return;
   }
@@ -918,6 +958,7 @@ function animate(timestamp) {
 }
 
 bindChoices();
+bindPalettePresets();
 const tuningButtons = [...document.querySelectorAll("[data-panel-button]")];
 const tuningGroups = [...document.querySelectorAll("section.control-group[data-group]")];
 for (const button of tuningGroups.length ? tuningButtons : []) {
