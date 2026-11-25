@@ -78,6 +78,7 @@ const offlineModeForm = document.querySelector("#offline-mode-form");
 const offlineModeAddress = document.querySelector("#offline-mode-address");
 const offlineModeError = document.querySelector("#offline-mode-error");
 const localOrigin = location.protocol === "http:" ? bannerDevice.address(location.origin) : null;
+const defaultOfflineOrigin = bannerDevice.address(document.querySelector('meta[name="banner-offline-address"]')?.content ?? "");
 const effectPanels = [...document.querySelectorAll("[data-effect-panel]")];
 const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPanel, {
   speed: Number(panel.dataset.scrollDefault ?? 0), direction: "left", alignment: "center",
@@ -350,10 +351,10 @@ function updateStatus(valid, dirty) {
   if (offlineMode && offlineModeUnpaired) {
     const hosted = !localOrigin && location.protocol === "https:";
     const disconnected = !device || !online;
-    const origin = hosted ? preferDirectAddress(
+    const origin = hosted ? (disconnected ? defaultOfflineOrigin : null) ?? preferDirectAddress(
       device?.origin, pendingHandoff?.origin, offlineOrigin, rememberedDevice?.origin,
       device?.fallback, rememberedDevice?.fallback
-    ) : null;
+    ) ?? defaultOfflineOrigin : null;
     const dock = disconnected ? previewOfflineAction : headerOfflineAction;
     if (dock && offlineMode.parentElement !== dock) dock.append?.(offlineMode, offlineModeUnpaired);
     const action = disconnected ? "Open offline mode" : "Offline mode";
