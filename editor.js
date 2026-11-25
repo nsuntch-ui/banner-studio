@@ -15,6 +15,7 @@ const enabled = document.querySelector("#enabled");
 const canvas = document.querySelector("#matrix");
 const context = canvas.getContext("2d");
 const status = document.querySelector("#status");
+const mainConnectionStatus = document.querySelector("#main-connection-status");
 const connectionBar = document.querySelector("#connection-bar");
 const connectionSource = document.querySelector("#connection-source");
 const connection = document.querySelector("#connection");
@@ -31,6 +32,7 @@ const alignmentField = document.querySelector("#alignment-field");
 const clipNote = document.querySelector("#clip-note");
 const mode = document.querySelector("#mode");
 const devicePanel = document.querySelector("#device-panel");
+const devicePanelLabel = devicePanel.querySelector("summary");
 const deviceForm = document.querySelector("#device-form");
 const deviceAddress = document.querySelector("#device-address");
 const deviceKey = document.querySelector("#device-key");
@@ -42,6 +44,12 @@ const showPairing = document.querySelector("#show-pairing");
 const pairingField = document.querySelector("#pairing-field");
 const pairingCode = document.querySelector("#pairing-code");
 const simulation = document.querySelector("#simulation");
+const settingsButton = document.querySelector("#settings-button");
+const settingsDialog = document.querySelector("#settings-dialog");
+const settingsClose = document.querySelector("#settings-close");
+const layoutTheme = document.querySelector("#layout-theme");
+const colorScheme = document.querySelector("#color-scheme");
+const localAppLink = document.querySelector("#local-app-link");
 const localOrigin = location.protocol === "http:" ? bannerDevice.address(location.origin) : null;
 const effectPanels = [...document.querySelectorAll("[data-effect-panel]")];
 const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPanel, {
@@ -65,6 +73,70 @@ let sending = null;
 let writeError = "";
 let localDraftEdited = false;
 let localConnectError = false;
+let connectError = "";
+let openingApp = false;
+let pendingHandoff = readHandoff();
+let rememberedDevice = readRememberedDevice();
+let nextRetry = 0;
+
+function preference(name) {
+  try {
+    return globalThis.localStorage?.getItem(`banner-studio.${name}`) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function savePreference(name, value) {
+  try {
+    if (value === null) globalThis.localStorage?.removeItem(`banner-studio.${name}`);
+    else globalThis.localStorage?.setItem(`banner-studio.${name}`, value);
+  } catch {}
+}
+
+function readHandoff() {
+  if (location.protocol !== "https:" || !location.hash) return null;
+  const handoff = bannerDevice.handoff(location.hash.slice(1));
+  if (handoff) history.replaceState(history.state, "", location.pathname + location.search);
+  return handoff;
+}
+
+function readRememberedDevice() {
+  if (location.protocol !== "https:") return null;
+  try {
+    const saved = JSON.parse(preference("connection"));
+    const origin = bannerDevice.address(saved?.origin ?? "");
+    const fallback = bannerDevice.address(saved?.fallback ?? "");
+    return origin && bannerDevice.validKey(saved?.key) ? { origin, key: saved.key, fallback } : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberDevice(target, state) {
+  if (localOrigin || location.protocol !== "https:") return;
+  const host = bannerDevice.address(state.host ?? "");
+  if (host && host !== target.origin) target.fallback = host;
+  const saved = JSON.stringify(target);
+  rememberedDevice = { ...target };
+  if (saved !== preference("connection")) savePreference("connection", saved);
+}
+
+function applyAppearance(control, key) {
+  if (!control?.options) return;
+  const saved = preference(key);
+  if ([...control.options].some(option => option.value === saved)) control.value = saved;
+  const update = () => {
+    document.documentElement.dataset[key] = control.value;
+    savePreference(key, control.value);
+  };
+  control.addEventListener("change", update);
+  update();
+}
+
+function openSettings() {
+  if (settingsDialog && !settingsDialog.open) settingsDialog.showModal();
+}
 
 function startAnimation(state) {
   return {
@@ -139,7 +211,8 @@ function originHost(origin) {
 
 function updateStatus(valid, dirty) {
   mode.textContent = device ? "Banner" : "Simulator";
-  const host = originHost(device ? device.origin : localOrigin);
+  const target = pendingHandoff ?? rememberedDevice;
+  const host = originHost(device?.origin ?? localOrigin ?? target?.origin);
   let sourceLabel = !online ? "Offline simulation" : location.protocol === "https:" ? "Web app · Not connected" : "Browser only";
   let label = "Simulation only — no banner connected";
   let state = "sim";
@@ -178,6 +251,11 @@ function updateStatus(valid, dirty) {
       label = "Connecting to local banner…";
       state = "draft";
     }
+  } else if (target || connectError) {
+    sourceLabel = host ? `Via web app · ${host}` : "Via web app";
+    label = connectButton.disabled ? "Connecting to banner…" : connectError ||
+      (pendingHandoff ? "Connect to your banner. Chrome may ask for local network access." : "Connect to your saved banner.");
+    state = connectError ? "offline" : "draft";
   } else if (!online) {
     label = "Offline simulation · edits previewed as a draft";
     state = "offline";
@@ -190,12 +268,27 @@ function updateStatus(valid, dirty) {
   if (connectionBar) connectionBar.dataset.state = state;
   if (connectionSource && connectionSource.textContent !== sourceLabel) connectionSource.textContent = sourceLabel;
   if (status.textContent !== label) status.textContent = label;
+  if (mainConnectionStatus) {
+    let brief = "";
+    if (!online || localConnectError || connectError) brief = device || localOrigin || target || connectError
+      ? "Banner offline" : "Preview offline";
+    else if (!device) brief = "Preview only";
+    else if (waitingForRetry) brief = "Draft ready in Settings";
+    else if (deviceState.save === "failed") brief = "Could not save to banner";
+    mainConnectionStatus.hidden = !brief;
+    if (mainConnectionStatus.textContent !== brief) mainConnectionStatus.textContent = brief;
+  }
   retry.hidden = !online || !waitingForRetry;
   retry.disabled = !valid;
   if (reconnect) {
-    reconnect.hidden = !((device && !online) || (localOrigin && !device && localConnectError));
-    reconnect.disabled = reading;
+    reconnect.hidden = device ? online : !target && !localConnectError;
+    reconnect.disabled = reading || connectButton.disabled;
+    reconnect.textContent = pendingHandoff ? "Connect" : "Reconnect";
   }
+  if (localAppLink) localAppLink.disabled = !localOrigin || !device || !online || openingApp;
+  if (localOrigin) showPairing.disabled = !device || !online;
+  else if (devicePanelLabel) devicePanelLabel.textContent = rememberedDevice ? "Manage banner" : "Pair with a code";
+  deviceSession.hidden = !rememberedDevice || Boolean(localOrigin);
 }
 
 function updateEditor() {
@@ -283,8 +376,10 @@ async function readDevice() {
   reading = true;
   const previous = deviceState;
   try {
-    const result = await bannerDevice.get(current);
+    const [target, result] = await readTarget(current);
     if (device !== current) return;
+    Object.assign(current, target);
+    rememberDevice(current, result);
     const dirty = !sameConfig(draft, applied);
     const changed = result.revision !== previous.revision || result.instance !== previous.instance;
     if (dirty && (changed || !online)) {
@@ -307,45 +402,69 @@ async function readDevice() {
   }
 }
 
-async function connectDevice(origin, key) {
+async function readTarget(target, timeout) {
+  try {
+    return [target, await bannerDevice.get(target, timeout)];
+  } catch (error) {
+    if (!target.fallback || target.fallback === target.origin) throw error;
+    const alternate = { ...target, origin: target.fallback, fallback: target.origin };
+    return [alternate, await bannerDevice.get(alternate)];
+  }
+}
+
+async function connectDevice(origin, key, options = {}) {
   if (connectButton.disabled) return;
   const startingDraft = draft;
   connectButton.disabled = true;
-  if (origin === localOrigin) {
-    localConnectError = false;
-    updateEditor();
-  }
+  if (origin === localOrigin) localConnectError = false;
+  connectError = "";
+  nextRetry = Date.now() + 10000;
   deviceFeedback.textContent = "Connecting to banner…";
+  updateEditor();
   try {
-    const next = { origin, key: key || await bannerDevice.pair(origin) };
-    const result = await bannerDevice.get(next);
+    if (options.claim) {
+      key = await bannerDevice.claim(origin, options.claim);
+      pendingHandoff = null;
+      rememberedDevice = { origin, key };
+    }
+    const [next, result] = await readTarget({
+      origin, key: key || await bannerDevice.pair(origin),
+      ...(options.fallback ? { fallback: options.fallback } : {}),
+    }, options.userGesture ? 30000 : undefined);
     device = next;
     deviceState = result;
     applied = result.config;
     online = true;
     localConnectError = false;
-    const keepDraft = (origin === localOrigin && localDraftEdited) || !sameConfig(startingDraft, draft);
+    pendingHandoff = null;
+    rememberDevice(next, result);
+    const keepDraft = localDraftEdited || !sameConfig(startingDraft, draft);
     localDraftEdited = false;
     waitingForRetry = keepDraft;
     writeError = keepDraft ? "Connected · draft ready to apply" : "";
     if (!keepDraft) setControls(result.config);
     deviceKey.value = "";
     deviceForm.hidden = true;
-    deviceSession.hidden = Boolean(localOrigin);
     simulation.hidden = true;
     devicePanel.open = false;
-    deviceFeedback.textContent = origin.replace("http://", "");
-    updateEditor();
+    deviceFeedback.textContent = "";
+    if (options.userGesture && settingsDialog?.open) settingsDialog.close();
   } catch (error) {
-    deviceFeedback.textContent = error instanceof TypeError || error.name === "TimeoutError"
-      ? "Couldn’t reach the banner. Check home Wi-Fi, the address, and Chrome’s local network permission."
+    connectError = error instanceof TypeError || error.name === "TimeoutError"
+      ? "Couldn’t reach the banner. Join home Wi-Fi and allow local network access in Chrome."
       : error.message;
-    if (origin === localOrigin && !device) {
-      localConnectError = true;
-      updateEditor();
+    deviceFeedback.textContent = connectError;
+    if (origin === localOrigin && !device) localConnectError = true;
+    if ((options.claim && error.status === 403) || error.status === 401) {
+      pendingHandoff = null;
+      if (error.status === 401) {
+        rememberedDevice = null;
+        savePreference("connection", null);
+      }
     }
   } finally {
     connectButton.disabled = false;
+    updateEditor();
   }
 }
 
@@ -356,8 +475,12 @@ function disconnectDevice() {
   reading = false;
   online = true;
   localConnectError = false;
+  connectError = "";
   waitingForRetry = false;
   writeError = "";
+  rememberedDevice = null;
+  pendingHandoff = null;
+  savePreference("connection", null);
   deviceForm.hidden = false;
   deviceSession.hidden = true;
   simulation.hidden = false;
@@ -365,9 +488,30 @@ function disconnectDevice() {
   updateEditor();
 }
 
+function connectKnownBanner(userGesture) {
+  if (device) return readDevice();
+  if (localOrigin) return connectDevice(localOrigin);
+  if (pendingHandoff) {
+    return connectDevice(pendingHandoff.origin, null, { claim: pendingHandoff.code, userGesture });
+  }
+  if (rememberedDevice) {
+    return connectDevice(rememberedDevice.origin, rememberedDevice.key, {
+      fallback: rememberedDevice.fallback, userGesture,
+    });
+  }
+}
+
+async function pollConnection() {
+  if (device) return readDevice();
+  if (location.protocol === "https:" && (rememberedDevice || pendingHandoff) &&
+      !connectButton.disabled && Date.now() >= nextRetry && await bannerDevice.localNetworkGranted()) {
+    await connectKnownBanner(false);
+  }
+}
+
 editor.addEventListener("submit", event => event.preventDefault());
 editor.addEventListener("input", () => {
-  if (localOrigin && !device) localDraftEdited = true;
+  if (!device && (localOrigin || rememberedDevice || pendingHandoff)) localDraftEdited = true;
   updateEditor();
 });
 pause.addEventListener("click", () => {
@@ -385,10 +529,7 @@ retry.addEventListener("click", () => {
   updateEditor();
 });
 if (reconnect) {
-  reconnect.addEventListener("click", () => {
-    if (device) return readDevice();
-    if (localOrigin) return connectDevice(localOrigin).then(() => { showPairing.disabled = !device; });
-  });
+  reconnect.addEventListener("click", () => connectKnownBanner(true));
 }
 deviceForm.addEventListener("submit", event => {
   event.preventDefault();
@@ -398,7 +539,21 @@ deviceForm.addEventListener("submit", event => {
     deviceFeedback.textContent = "Enter a local banner address and the 16-character pairing code.";
     return;
   }
-  connectDevice(origin, key);
+  connectDevice(origin, key, { userGesture: true });
+});
+settingsButton?.addEventListener("click", openSettings);
+settingsClose?.addEventListener("click", () => settingsDialog.close());
+localAppLink?.addEventListener("click", async () => {
+  if (!localOrigin || !device || !online || openingApp) return;
+  openingApp = true;
+  localAppLink.disabled = true;
+  try {
+    location.assign(await bannerDevice.appLink(localOrigin));
+  } catch {
+    deviceFeedback.textContent = "Couldn’t open the web app. Try again or show the pairing code.";
+    openingApp = false;
+    localAppLink.disabled = false;
+  }
 });
 document.querySelector("#disconnect-device").addEventListener("click", disconnectDevice);
 showPairing.addEventListener("click", () => {
@@ -569,6 +724,8 @@ function animate(timestamp) {
   window.requestAnimationFrame(animate);
 }
 
+applyAppearance(layoutTheme, "layout");
+applyAppearance(colorScheme, "palette");
 updateEditor();
 if (localOrigin) {
   devicePanel.hidden = false;
@@ -576,9 +733,17 @@ if (localOrigin) {
   deviceForm.hidden = true;
   devicePanel.querySelector("summary").textContent = "Pair the installed app";
   showPairing.disabled = true;
-  connectDevice(localOrigin).then(() => { showPairing.disabled = !device; });
+  connectDevice(localOrigin);
 } else if (location.protocol === "https:") {
   devicePanel.hidden = false;
+  if (pendingHandoff) {
+    bannerDevice.localNetworkGranted().then(granted => {
+      if (granted) connectKnownBanner(false);
+      else openSettings();
+    });
+  } else {
+    pollConnection();
+  }
 }
-setInterval(readDevice, 2500);
+setInterval(pollConnection, 2500);
 window.requestAnimationFrame(animate);

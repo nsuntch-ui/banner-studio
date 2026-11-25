@@ -1,6 +1,8 @@
 "use strict";
 
 const bannerDevice = (() => {
+  const hostedOrigin = "https://nsuntch-ui.github.io";
+  const hostedPath = "/banner-studio/";
   const effects = {
     marquee: { color: /^#[0-9a-f]{6}$/i },
     gradient: { start: /^#[0-9a-f]{6}$/i, end: /^#[0-9a-f]{6}$/i,
@@ -65,10 +67,10 @@ const bannerDevice = (() => {
     return state;
   }
 
-  async function request(origin, path, options) {
+  async function request(origin, path, options, timeout = 3500) {
     const response = await fetch(origin + path, {
       ...options, credentials: "omit", redirect: "error", cache: "no-store",
-      targetAddressSpace: "local", signal: AbortSignal.timeout(3500),
+      targetAddressSpace: "local", signal: AbortSignal.timeout(timeout),
     });
     const data = await response.json().catch(() => null);
     if (!response.ok && response.status !== 409) {
@@ -89,8 +91,45 @@ const bannerDevice = (() => {
     return typeof key === "string" && /^[0-9a-f]{16}$/i.test(key);
   }
 
-  function get(device) {
-    return request(device.origin, "/api/v1/display", { headers: { "X-Banner-Key": device.key } })
+  function handoff(fragment) {
+    const params = new URLSearchParams(fragment);
+    const origin = address(params.get("banner") ?? "");
+    const code = params.get("claim") ?? "";
+    return origin && /^[0-9a-f]{32}$/.test(code) ? { origin, code } : null;
+  }
+
+  async function appLink(origin) {
+    const data = await request(origin, "/api/v1/app-link", {
+      method: "POST", headers: { "X-Banner-Local": "1" },
+    });
+    const url = new URL(data?.url);
+    if (url.origin !== hostedOrigin || url.pathname !== hostedPath || url.search ||
+        url.username || url.password || !handoff(url.hash.slice(1))) {
+      throw new Error("The banner did not return a valid app link.");
+    }
+    return url.href;
+  }
+
+  async function claim(origin, code) {
+    const data = await request(origin, "/api/v1/claim", {
+      method: "POST", body: new URLSearchParams({ code }),
+    }, 30000);
+    if (!validKey(data?.key)) throw new Error("The banner did not confirm the connection.");
+    return data.key;
+  }
+
+  async function localNetworkGranted() {
+    for (const name of ["local-network", "local-network-access"]) {
+      try {
+        const permission = await globalThis.navigator?.permissions?.query({ name });
+        if (permission) return permission.state === "granted";
+      } catch {}
+    }
+    return false;
+  }
+
+  function get(device, timeout) {
+    return request(device.origin, "/api/v1/display", { headers: { "X-Banner-Key": device.key } }, timeout)
       .then(checkState);
   }
 
@@ -104,5 +143,5 @@ const bannerDevice = (() => {
     }).then(checkState);
   }
 
-  return { address, fields, validKey, pair, get, put };
+  return { address, fields, validKey, handoff, appLink, claim, localNetworkGranted, pair, get, put };
 })();

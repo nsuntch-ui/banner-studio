@@ -1,69 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-layout="studio" data-palette="forest">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=a7ff3c307308">
+  <link rel="stylesheet" href="styles.css?v=3963459ba144">
   <script defer src="font.js?v=81ff6526cd90"></script>
-  <script defer src="device.js?v=6f3e2b16cb83"></script>
-  <script defer src="editor.js?v=ff90c7654b7d"></script>
+  <script defer src="device.js?v=c6005ed1ce61"></script>
+  <script defer src="editor.js?v=2b1a6ffd6a75"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
 </head>
-<body>
-  <main class="workspace">
+<body class="studio-page">
+  <main class="workspace studio-workspace">
     <header class="masthead">
-      <div class="identity"><span class="mark" aria-hidden="true"></span><h1>Banner Studio</h1></div>
-    </header>
-
-    <section id="connection-bar" class="connection-bar" aria-labelledby="connection-title" data-state="sim">
-      <div class="connection-summary">
-        <div class="connection-meta">
-          <h2 id="connection-title" class="sr-only">Connection status</h2>
-          <div class="connection-badges">
-            <span id="mode" class="mode">Simulator</span>
-            <span id="connection-source" class="connection-source">Browser only</span>
-          </div>
-          <p id="status" class="status" role="status" data-state="sim">Simulation only — no banner connected</p>
-        </div>
-        <div class="connection-actions">
-          <button id="retry" class="ghost" type="button" hidden>Apply draft</button>
-          <button id="reconnect" class="ghost" type="button" hidden>Reconnect</button>
-        </div>
+      <div class="identity">
+        <span class="mark" aria-hidden="true"></span>
+        <div><h1>Banner Studio</h1><p class="studio-family">Untch Family</p></div>
       </div>
-
-      <details id="device-panel" class="device-panel" hidden>
-        <summary>Connect banner</summary>
-        <form id="device-form" class="device-form">
-          <p class="hint">Use the address and pairing code from the banner’s local editor. Allow local network access when Chrome asks.</p>
-          <div class="fields device-fields">
-            <label class="field">Banner address<input id="device-address" type="text" placeholder="192.168.1.40" inputmode="url" autocomplete="off" spellcheck="false" required></label>
-            <label class="field">Pairing code<input id="device-key" type="password" maxlength="16" autocomplete="off" required></label>
-          </div>
-          <button id="connect-device" class="ghost" type="submit">Connect</button>
-        </form>
-        <div id="local-pairing" class="device-form" hidden>
-          <p class="hint">To connect from the installed app, enter this banner’s address and pairing code there.</p>
-          <button id="show-pairing" class="ghost" type="button">Show pairing code</button>
-          <label id="pairing-field" class="field" hidden>Pairing code<input id="pairing-code" type="text" readonly></label>
-        </div>
-        <div id="device-session" class="device-form" hidden>
-          <button id="disconnect-device" class="ghost" type="button">Disconnect banner</button>
-        </div>
-        <p id="device-feedback" class="hint device-feedback" role="status"></p>
-      </details>
-    </section>
+      <button id="settings-button" class="ghost settings-button" type="button" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings-dialog" title="Settings"><span aria-hidden="true">&#9881;&#65038;</span></button>
+    </header>
 
     <section class="display" aria-labelledby="preview-title">
       <div class="section-heading">
-        <div class="preview-heading"><h2 id="preview-title">Display preview</h2><span class="dimensions">64 × 8</span></div>
+        <h2 id="preview-title">Display preview</h2>
         <button class="ghost" id="pause" type="button">Pause preview</button>
       </div>
       <div class="matrix-frame">
         <canvas id="matrix" width="768" height="96" role="img" aria-label="Simulated 64 by 8 LED display"></canvas>
       </div>
+      <p id="main-connection-status" class="hint main-connection-status" role="status" hidden></p>
     </section>
 
     <form id="editor" class="editor">
@@ -129,10 +96,88 @@
       </section>
     </form>
 
-    <details id="simulation" class="simulation">
+  </main>
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <header class="settings-header">
+      <h2 id="settings-title">Settings</h2>
+      <button id="settings-close" class="ghost" type="button" autofocus>Close</button>
+    </header>
+
+    <section class="settings-section" aria-labelledby="appearance-title">
+      <h3 id="appearance-title">Appearance</h3>
+      <div class="fields appearance-fields">
+        <label class="field">Layout
+          <select id="layout-theme">
+            <option value="studio">Studio</option>
+            <option value="compact">Compact</option>
+            <option value="focus">Focus</option>
+            <option value="console">Console</option>
+          </select>
+        </label>
+        <label class="field">Color scheme
+          <select id="color-scheme">
+            <option value="forest">Forest</option>
+            <option value="midnight">Midnight</option>
+            <option value="amber">Amber</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section id="connection-bar" class="settings-section connection-bar" aria-labelledby="connection-title" data-state="sim">
+      <h3 id="connection-title">Banner connection</h3>
+      <div class="connection-summary">
+        <div class="connection-meta">
+          <div class="connection-badges">
+            <span id="mode" class="mode">Simulator</span>
+            <span id="connection-source" class="connection-source">Browser only</span>
+          </div>
+          <p id="status" class="status" role="status" data-state="sim">Simulation only — no banner connected</p>
+        </div>
+        <div class="connection-actions">
+          <button id="retry" class="ghost" type="button" hidden>Apply draft</button>
+          <button id="reconnect" class="ghost" type="button" hidden>Reconnect</button>
+        </div>
+      </div>
+
+      <details id="device-panel" class="device-panel" hidden>
+        <summary>Connect banner</summary>
+        <form id="device-form" class="device-form">
+          <p class="hint">For manual pairing, use the address and pairing code from the local editor.</p>
+          <div class="fields device-fields">
+            <label class="field">Banner address<input id="device-address" type="text" inputmode="url" autocomplete="off" spellcheck="false" required></label>
+            <label class="field">Pairing code<input id="device-key" type="password" maxlength="16" autocomplete="off" required></label>
+          </div>
+          <button id="connect-device" class="ghost" type="submit">Connect</button>
+        </form>
+        <div id="local-pairing" class="device-form" hidden>
+          <button id="local-app-link" class="ghost" type="button">Open web app</button>
+          <details class="pairing-manual">
+            <summary>Pair with a code</summary>
+            <div class="device-form">
+              <button id="show-pairing" class="ghost" type="button">Show pairing code</button>
+              <label id="pairing-field" class="field" hidden>Pairing code<input id="pairing-code" type="text" readonly></label>
+            </div>
+          </details>
+        </div>
+        <div id="device-session" class="device-form" hidden>
+          <button id="disconnect-device" class="ghost" type="button">Forget banner</button>
+        </div>
+        <p id="device-feedback" class="hint device-feedback" role="status"></p>
+      </details>
+    </section>
+
+    <section class="settings-section" aria-labelledby="setup-section-title">
+      <h3 id="setup-section-title">Wi-Fi setup</h3>
+      <p class="hint">Join the banner’s <strong>Banner-Setup</strong> Wi-Fi, then open setup.</p>
+      <a id="setup-launch" class="ghost settings-link" href="http://192.168.77.1/" target="_blank" rel="noopener">Open Wi-Fi setup</a>
+    </section>
+
+    <details id="simulation" class="simulation settings-section">
       <summary>Test connection behavior</summary>
       <div class="simulation-body"><p class="hint">Disconnect and make an edit to see how the app keeps your draft.</p><button id="connection" class="ghost" type="button">Simulate disconnect</button></div>
     </details>
-  </main>
+  </dialog>
 </body>
 </html>
