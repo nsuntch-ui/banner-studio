@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=351258a4ccf9">
+  <link rel="stylesheet" href="styles.css?v=0e5865aee2d4">
   <script defer src="font.js?v=81ff6526cd90"></script>
   <script defer src="device.js?v=9feb03d8e02d"></script>
-  <script defer src="editor.js?v=711d109b672a"></script>
+  <script defer src="editor.js?v=dcca50d1edb1"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -17,8 +17,10 @@
     <div class="top-inner">
       <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><div><strong>LED BANNER</strong><span class="studio-family">Untch Family Studio</span></div></div>
       <div class="top-actions">
-        <a id="offline-mode" class="offline-shortcut" target="_blank" rel="noopener" hidden>Offline mode</a>
-        <button id="offline-mode-unpaired" class="offline-shortcut" type="button" aria-haspopup="dialog" aria-controls="settings-dialog" hidden>Offline mode</button>
+        <div id="header-offline-action" class="offline-action">
+          <a id="offline-mode" class="offline-shortcut" target="_blank" rel="noopener" hidden>Open offline mode</a>
+          <button id="offline-mode-unpaired" class="offline-shortcut" type="button" aria-haspopup="dialog" aria-controls="settings-dialog" hidden>Open offline mode</button>
+        </div>
         <button id="settings-button" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="settings-dialog"><span aria-hidden="true">⚙</span></button>
       </div>
     </div>
@@ -29,7 +31,10 @@
       <section class="stage" aria-labelledby="stage-title">
         <div class="stage-heading">
           <h1 id="stage-title">Workbench</h1>
-          <p id="main-connection-status" class="preview-status main-connection-status" role="status">Preview only</p>
+          <div class="stage-connection">
+            <p id="main-connection-status" class="preview-status main-connection-status" role="status">Preview only</p>
+            <div id="preview-offline-action" class="offline-action"></div>
+          </div>
         </div>
         <figure class="preview">
           <div class="preview-toolbar"><figcaption><b>Banner preview</b><span>64 × 8</span></figcaption><button id="pause" type="button">Pause preview</button></div>
@@ -329,7 +334,6 @@
 
     <section id="connection-bar" class="settings-section connection-bar" aria-labelledby="connection-title" data-state="sim">
       <h3 id="connection-title">Banner connection</h3>
-      <p id="offline-mode-help" class="hint" role="status" hidden>Connect a banner to use Offline mode on your home Wi-Fi.</p>
       <div class="connection-summary">
         <div class="connection-meta">
           <div class="connection-badges">
@@ -343,6 +347,15 @@
           <button id="reconnect" class="ghost" type="button" hidden>Reconnect</button>
         </div>
       </div>
+
+      <form id="offline-mode-form" class="device-form" hidden novalidate>
+        <p id="offline-mode-help" class="hint">Enter the banner’s IP address once. No pairing code needed.</p>
+        <div class="fields device-fields">
+          <label class="field" for="offline-mode-address">Banner IP address<input id="offline-mode-address" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="offline-mode-help offline-mode-error" required></label>
+        </div>
+        <p id="offline-mode-error" class="error" role="alert" hidden></p>
+        <button class="ghost" type="submit">Open local editor</button>
+      </form>
 
       <details id="device-panel" class="device-panel" hidden>
         <summary>Connect banner</summary>

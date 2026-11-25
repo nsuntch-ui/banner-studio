@@ -123,8 +123,11 @@ input { accent-color: var(--accent); }
 .brand-icon i { height: 4px; border-radius: 1px; background: var(--accent); }
 .brand-icon i:nth-child(3n) { opacity: .55; }
 .top-actions { display: flex; align-items: center; gap: .45rem; }
+.offline-action { display: flex; align-items: center; }
+.offline-action:not(:has(.offline-shortcut:not([hidden]))) { display: none; }
 .offline-shortcut {
   min-height: 44px;
+  min-width: 44px;
   display: inline-flex;
   align-items: center;
   padding-inline: .62rem;
@@ -170,8 +173,11 @@ input { accent-color: var(--accent); }
 
 .workspace { width: min(100% - 3rem, 72rem); margin: 2rem auto 3rem; }
 .stage { min-width: 0; }
-.stage-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: .35rem 1rem; margin-bottom: .85rem; }
+.stage-heading { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: .35rem 1rem; margin-bottom: .85rem; }
 .stage-heading h1 { font: 720 clamp(1.85rem, 4vw, 2.8rem)/1.08 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; letter-spacing: -.05em; }
+.stage-connection { display: flex; align-items: center; flex-wrap: wrap; gap: .2rem .65rem; min-width: 0; }
+#preview-offline-action .offline-shortcut { border-color: var(--highlight-border); background: var(--accent-soft); }
+#preview-offline-action .offline-shortcut:hover { border-color: var(--accent); }
 .preview-status { font-size: .85rem; font-weight: 600; color: var(--muted); }
 .preview {
   padding: .75rem 1rem 1rem;
@@ -419,6 +425,7 @@ input { accent-color: var(--accent); }
 .device-form { display: grid; justify-items: start; gap: .65rem; margin-top: .65rem; }
 .device-fields { width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
 .device-form input { font: inherit; padding: 0 .65rem; }
+#offline-mode-address[aria-invalid="true"] { border-color: var(--error); }
 .device-feedback:not(:empty) { margin-top: .65rem; }
 .pairing-manual { width: 100%; }
 
