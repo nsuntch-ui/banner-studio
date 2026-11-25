@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=d222250ccdf3">
+  <link rel="stylesheet" href="styles.css?v=90864f08f6e4">
   <script defer src="font.js?v=81ff6526cd90"></script>
-  <script defer src="device.js?v=eebe9ce635ce"></script>
-  <script defer src="editor.js?v=9237ea53a7a8"></script>
+  <script defer src="device.js?v=d27643124019"></script>
+  <script defer src="editor.js?v=46075197d5d5"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -45,6 +45,8 @@
             <label><input type="radio" name="effect" value="marquee" checked><span class="effect-card"><span class="effect-sample sample-marquee" aria-hidden="true">HELLO<span> ›</span></span><strong>Marquee</strong><small>Scrolling text</small></span></label>
             <label><input type="radio" name="effect" value="gradient"><span class="effect-card"><span class="effect-sample sample-gradient" aria-hidden="true">HELLO</span><strong>Gradient</strong><small>Blend two colors</small></span></label>
             <label><input type="radio" name="effect" value="typewriter"><span class="effect-card"><span class="effect-sample sample-typewriter" aria-hidden="true">HI<span> ▮</span></span><strong>Typewriter</strong><small>Letter by letter</small></span></label>
+            <label><input type="radio" name="effect" value="rainbow-wave"><span class="effect-card"><span class="effect-sample sample-rainbow-wave" aria-hidden="true"><span>HELLO</span></span><strong>Rainbow Wave</strong><small>Flowing colors</small></span></label>
+            <label><input type="radio" name="effect" value="multi-color"><span class="effect-card"><span class="effect-sample sample-multi-color" aria-hidden="true"><span>H</span><span>E</span><span>L</span><span>L</span><span>O</span></span><strong>Multi-Color</strong><small>Custom palette</small></span></label>
           </fieldset>
         </section>
       </section>
@@ -92,6 +94,44 @@
               <div class="range-control">
                 <div class="control-label"><label for="typing-speed">Typing speed</label><output for="typing-speed">6 letters/s</output></div>
                 <input id="typing-speed" data-setting="speed" data-unit=" letters/s" type="range" min="1" max="15" value="6">
+              </div>
+            </div>
+
+            <div data-effect-panel="rainbow-wave" data-scroll-default="18" hidden>
+              <div class="range-control">
+                <div class="control-label"><label for="wave-speed">Wave speed</label><output for="wave-speed">24 cycles/min</output></div>
+                <input id="wave-speed" data-setting="waveSpeed" data-unit=" cycles/min" type="range" min="0" max="60" value="24">
+              </div>
+              <div class="range-control">
+                <div class="control-label"><label for="wave-width">Wave width</label><output for="wave-width">32 px</output></div>
+                <input id="wave-width" data-setting="waveWidth" data-unit=" px" type="range" min="8" max="64" value="32">
+              </div>
+              <div class="range-control">
+                <div class="control-label"><label for="wave-saturation">Saturation</label><output for="wave-saturation">100%</output></div>
+                <input id="wave-saturation" data-setting="waveSaturation" data-unit="%" type="range" min="0" max="100" value="100">
+              </div>
+              <div data-choice-label="Color direction">
+                <select id="wave-direction" data-setting="waveDirection" hidden><option value="left">Left</option><option value="right">Right</option></select>
+              </div>
+            </div>
+
+            <div data-effect-panel="multi-color" data-scroll-default="18" hidden>
+              <div data-choice-label="Number of colors">
+                <select id="multi-color-count" data-setting="colorCount" hidden><option value="2">Two</option><option value="3" selected>Three</option></select>
+              </div>
+              <fieldset class="choices">
+                <legend>Palette</legend>
+                <div class="palette-swatches">
+                  <label class="swatch">Color 1<input data-setting="color1" type="color" value="#ffcc73"></label>
+                  <label class="swatch">Color 2<input data-setting="color2" type="color" value="#ff789f"></label>
+                  <label class="swatch" id="multi-color-third">Color 3<input data-setting="color3" type="color" value="#70b7ff"></label>
+                </div>
+              </fieldset>
+              <div data-choice-label="Apply colors">
+                <select id="multi-color-grouping" data-setting="colorGrouping" hidden><option value="letter">By letter</option><option value="word">By word</option></select>
+              </div>
+              <div data-choice-label="Color pattern">
+                <select id="multi-color-pattern" data-setting="colorPattern" hidden><option value="cycle">Cycle</option><option value="mirror">Mirror</option></select>
               </div>
             </div>
           </div>

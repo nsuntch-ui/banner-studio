@@ -37,6 +37,8 @@ const marqueeRainbowField = document.querySelector("#marquee-rainbow-field");
 const gradientPulseField = document.querySelector("#gradient-pulse-field");
 const gradientDirection = document.querySelector("#gradient-direction");
 const gradientPulseOption = document.querySelector('#gradient-direction option[value="color-pulse"]');
+const multiColorThird = document.querySelector("#multi-color-third");
+const multiColorPattern = document.querySelector("#multi-color-pattern");
 const scrollOptions = document.querySelector("#scroll-options");
 const scrollDirectionField = document.querySelector("#scroll-direction-field");
 const alignmentField = document.querySelector("#alignment-field");
@@ -69,6 +71,7 @@ const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPa
 }]));
 const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500 };
 const choiceBindings = [];
+const expandedEffects = ["rainbow-wave", "multi-color"];
 
 let activeEffect;
 let draft = readEditor();
@@ -227,6 +230,7 @@ function readEditor() {
     let value = input.value;
     if (input.type === "checkbox") value = input.checked;
     if (input.type === "range") value = input.valueAsNumber;
+    if (input.dataset.setting === "colorCount") value = Number(value);
     settings[input.dataset.setting] = value;
   }
   return { message: message.value, effect, settings, motion, brightness: brightness.valueAsNumber,
@@ -243,6 +247,10 @@ function previewState() {
 
 function sameConfig(left, right) {
   return bannerDevice.fields(left).toString() === bannerDevice.fields(right).toString();
+}
+
+function supportsEffect(effect) {
+  return !device || !expandedEffects.includes(effect) || Boolean(deviceState?.effects?.includes(effect));
 }
 
 function setControls(config) {
@@ -285,6 +293,9 @@ function updateStatus(valid, dirty) {
       state = "offline";
     } else if (!valid) {
       label = "Message contains unsupported characters";
+      state = "draft";
+    } else if (!supportsEffect(draft.effect)) {
+      label = "This effect requires newer banner firmware";
       state = "draft";
     } else if (waitingForRetry) {
       label = writeError || "Reconnected · draft ready to apply";
@@ -333,13 +344,14 @@ function updateStatus(valid, dirty) {
     if (!online || localConnectError || connectError) brief = device || localOrigin || target || connectError
       ? "Banner offline" : "Preview offline";
     else if (!device) brief = "Preview only";
+    else if (!supportsEffect(draft.effect)) brief = "Firmware update needed for this effect";
     else if (waitingForRetry) brief = "Draft ready in Settings";
     else if (deviceState.save === "failed") brief = "Could not save to banner";
     mainConnectionStatus.hidden = !brief;
     if (mainConnectionStatus.textContent !== brief) mainConnectionStatus.textContent = brief;
   }
   retry.hidden = !online || !waitingForRetry;
-  retry.disabled = !valid;
+  retry.disabled = !valid || !supportsEffect(draft.effect);
   if (reconnect) {
     reconnect.hidden = device ? online : !target && !localConnectError;
     reconnect.disabled = reading || connectButton.disabled;
@@ -396,6 +408,8 @@ function updateEditor() {
   if (marqueeColorField) marqueeColorField.hidden = rainbow;
   if (marqueeRainbowField) marqueeRainbowField.hidden = !rainbow;
   if (gradientPulseField) gradientPulseField.hidden = draft.settings.direction !== "color-pulse";
+  if (multiColorThird) multiColorThird.hidden = draft.settings.colorCount !== 3;
+  if (multiColorPattern?.parentElement) multiColorPattern.parentElement.hidden = draft.settings.colorCount !== 3;
 
   for (const panel of effectPanels) {
     panel.hidden = panel.dataset.effectPanel !== draft.effect;
@@ -405,12 +419,19 @@ function updateEditor() {
       range.setAttribute("aria-valuetext", value);
     }
   }
+  for (const effect of expandedEffects) {
+    const choice = editor.querySelector(`input[name=effect][value="${effect}"]`);
+    if (!choice) continue;
+    choice.disabled = !supportsEffect(effect);
+    choice.parentElement.hidden = choice.disabled && !choice.checked;
+  }
   syncChoices();
 
   if (!device && online && !waitingForRetry && valid) applied = draft;
   const dirty = !sameConfig(applied, draft);
   if (!dirty) waitingForRetry = false;
-  const canSend = device && online && valid && dirty && !waitingForRetry && !applying && !reading;
+  const canSend = device && online && valid && supportsEffect(draft.effect) &&
+    dirty && !waitingForRetry && !applying && !reading;
   if (!canSend && sending !== null) {
     clearTimeout(sending);
     sending = null;
@@ -442,7 +463,7 @@ function updateEditor() {
 
 async function applyDeviceDraft() {
   const current = device;
-  if (!current || !online || waitingForRetry || applying || reading ||
+  if (!current || !online || waitingForRetry || applying || reading || !supportsEffect(draft.effect) ||
       !validMessage(draft.message) || sameConfig(draft, applied)) return;
   const submitted = draft;
   applying = true;
@@ -766,6 +787,10 @@ function advanceAnimation(state, elapsed) {
   animation.time += elapsed;
   if (state.effect === "marquee") {
     animation.rainbowPhase = (animation.rainbowPhase + elapsed * (state.settings.colorSpeed ?? 24) / 60) % 1;
+  } else if (state.effect === "rainbow-wave") {
+    const direction = state.settings.waveDirection === "left" ? 1 : -1;
+    const phase = animation.rainbowPhase + direction * elapsed * state.settings.waveSpeed / 60;
+    animation.rainbowPhase = phase - Math.floor(phase);
   } else if (state.effect === "gradient") {
     animation.colorPulsePhase = (animation.colorPulsePhase + elapsed * 1000 / (state.settings.pulseMs ?? 2500)) % 1;
   }
@@ -822,6 +847,29 @@ function drawEffect(text, state) {
       const ratio = colorPulse ?? (settings.direction === "vertical" ? Math.min(y / 6, 1) : (x - left) / colorSpan);
       return start.map((component, index) => component + (end[index] - component) * ratio);
     }, light * pulse);
+    return;
+  }
+  if (effect === "rainbow-wave") {
+    const saturation = settings.waveSaturation / 100;
+    drawText(text, left, x => rainbowColor(animation.rainbowPhase + (x - left) / settings.waveWidth)
+      .map(component => 255 + (component - 255) * saturation), light);
+    return;
+  }
+  if (effect === "multi-color") {
+    const colors = [rgb(settings.color1), rgb(settings.color2), rgb(settings.color3)];
+    const count = settings.colorCount;
+    const mirror = settings.colorPattern === "mirror";
+    const period = mirror ? 2 * count - 2 : count;
+    let colorIndex = -1;
+    let followsSpace = true;
+    const letters = Array.from(text, glyph => {
+      const space = glyph === " ";
+      if (!space && (followsSpace || settings.colorGrouping === "letter")) colorIndex++;
+      followsSpace = space;
+      const step = Math.max(0, colorIndex) % period;
+      return colors[mirror && step >= count ? period - step : step];
+    });
+    drawText(text, left, (_, __, index) => letters[index], light);
     return;
   }
 

@@ -3,12 +3,17 @@
 const bannerDevice = (() => {
   const hostedOrigin = "https://nsuntch-ui.github.io";
   const hostedPath = "/banner-studio/";
+  const color = /^#[0-9a-f]{6}$/i;
   const effects = {
-    marquee: { color: /^#[0-9a-f]{6}$/i },
-    gradient: { start: /^#[0-9a-f]{6}$/i, end: /^#[0-9a-f]{6}$/i,
+    marquee: { color },
+    gradient: { start: color, end: color,
       direction: /^(horizontal|vertical|color-pulse)$/, pulse: /^(true|false)$/ },
-    typewriter: { color: /^#[0-9a-f]{6}$/i, cursor: /^(block|underline|star|hidden)$/,
+    typewriter: { color, cursor: /^(block|underline|star|hidden)$/,
       speed: /^(?:[1-9]|1[0-5])$/ },
+    "rainbow-wave": { waveSpeed: /^\d+$/, waveWidth: /^\d+$/, waveSaturation: /^\d+$/,
+      waveDirection: /^(left|right)$/ },
+    "multi-color": { color1: color, color2: color, color3: color, colorCount: /^[23]$/,
+      colorGrouping: /^(letter|word)$/, colorPattern: /^(cycle|mirror)$/ },
   };
 
   function address(value) {
@@ -79,7 +84,10 @@ const bannerDevice = (() => {
         (config.effect === "gradient" && typeof settings.pulse !== "boolean") ||
         (config.effect === "gradient" && features.includes("gradient-color-pulse") &&
           !interval(settings.pulseMs, 500, 10000)) ||
-        (config.effect === "typewriter" && typeof settings.speed !== "number")) {
+        (config.effect === "typewriter" && typeof settings.speed !== "number") ||
+        (config.effect === "rainbow-wave" && (!range(settings.waveSpeed, 0, 60) ||
+          !range(settings.waveWidth, 8, 64) || !range(settings.waveSaturation, 0, 100))) ||
+        (config.effect === "multi-color" && !range(settings.colorCount, 2, 3))) {
       throw new Error("This banner returned an unsupported display state.");
     }
     return state;

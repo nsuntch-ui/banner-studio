@@ -215,11 +215,14 @@ input { accent-color: var(--accent); }
 .range-control input { width: 100%; min-height: 30px; margin: .22rem 0 0; }
 .swatch, .toggle { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: .45rem; font-weight: 600; }
 .swatch input { width: 48px; height: 38px; border: 1px solid var(--line); border-radius: .5rem; padding: 3px; background: var(--surface); cursor: pointer; }
+.palette-swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4rem), 1fr)); gap: .5rem; margin-top: .35rem; }
+.palette-swatches .swatch { display: grid; justify-content: stretch; gap: .25rem; }
+.palette-swatches input { width: 100%; max-width: 5rem; min-height: 44px; }
 .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem 1.1rem; }
 .toggle input { width: 20px; height: 20px; flex: 0 0 auto; }
 .display-toggles { padding-top: .28rem; border-top: 1px solid var(--line); }
 
-.effect-picker { min-width: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.effect-picker { min-width: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.8rem), 1fr)); gap: .65rem; }
 .effect-picker label { position: relative; display: flex; cursor: pointer; min-width: 0; }
 .effect-picker input { position: absolute; width: 1px; height: 1px; margin: 0; clip-path: inset(50%); }
 .effect-card { width: 100%; min-width: 0; display: grid; align-content: start; gap: .16rem; border: 1px solid var(--line); border-radius: .7rem; padding: .48rem; background: var(--surface); }
@@ -243,6 +246,17 @@ input { accent-color: var(--accent); }
 .sample-gradient { background: linear-gradient(100deg, #182739, #322143); color: #edc2fd; }
 .sample-typewriter { color: #ffbf88; }
 .sample-typewriter span { color: #ffa875; }
+.sample-rainbow-wave { color: #ffa4c0; }
+@supports (background-clip: text) {
+  .sample-rainbow-wave span {
+    background: linear-gradient(95deg, #ff9b9d, #ffda86 25%, #9ee7a4 50%, #91d9fd 75%, #d7afff);
+    background-clip: text;
+    color: transparent;
+  }
+}
+.sample-multi-color span:nth-child(3n + 1) { color: #ffcc73; }
+.sample-multi-color span:nth-child(3n + 2) { color: #ff789f; }
+.sample-multi-color span:nth-child(3n) { color: #70b7ff; }
 
 .editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem); gap: clamp(1rem, 3vw, 2.4rem); align-items: start; }
 .preview { border-radius: 1.25rem; box-shadow: 0 .5rem 1.6rem #0b091616; }
