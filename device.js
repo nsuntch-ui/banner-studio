@@ -14,6 +14,10 @@ const bannerDevice = (() => {
       waveDirection: /^(left|right)$/ },
     "multi-color": { color1: color, color2: color, color3: color, colorCount: /^[2-5]$/,
       colorGrouping: /^(letter|word)$/, colorPattern: /^(cycle|mirror)$/ },
+    "sine-wave": { color, sineStyle: /^(wave|ripple|counter)$/, sineDirection: /^(left|right)$/,
+      sineSpeed: /^\d+$/, sineWidth: /^\d+$/, sineDepth: /^\d+$/, counterSpeed: /^\d+$/, counterStrength: /^\d+$/ },
+    cipher: { color, scrambleColor: color, cipherSymbols: /^(symbols|hex|digits)$/,
+      cipherOrder: /^(forward|reverse|outside-in)$/, decodeMs: /^\d+$/, holdMs: /^\d+$/, scrambleRate: /^\d+$/ },
   };
 
   function address(value) {
@@ -96,7 +100,12 @@ const bannerDevice = (() => {
             !["text", "display"].includes(settings.waveAnchor)))) ||
         (config.effect === "multi-color" && (features.includes("multi-color-five")
           ? !range(settings.colorCount, 2, 5) || !color.test(settings.color4) || !color.test(settings.color5)
-          : !range(settings.colorCount, 2, 3)))) {
+          : !range(settings.colorCount, 2, 3))) ||
+        (config.effect === "sine-wave" && (!range(settings.sineSpeed, 0, 60) ||
+          !range(settings.sineWidth, 12, 64) || !range(settings.sineDepth, 0, 2) ||
+          !range(settings.counterSpeed, 0, 60) || !range(settings.counterStrength, 0, 100))) ||
+        (config.effect === "cipher" && (!interval(settings.decodeMs, 750, 6000) ||
+          !interval(settings.holdMs, 500, 10000) || !range(settings.scrambleRate, 2, 10)))) {
       throw new Error("This banner returned an unsupported display state.");
     }
     return state;

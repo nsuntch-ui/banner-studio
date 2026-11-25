@@ -190,7 +190,8 @@ input { accent-color: var(--accent); }
 .error { color: var(--error); }
 
 .control-content { padding: .4rem .2rem .95rem; font-size: .92rem; }
-.control-content, [data-effect-panel] { display: grid; gap: .85rem; }
+.control-content, [data-effect-panel], .effect-detail { display: grid; gap: .85rem; }
+.effect-detail { border-top: 1px solid var(--line); padding-top: .85rem; }
 .choices { min-width: 0; padding: 0; border: 0; }
 .choices legend { padding: 0; font-weight: 650; }
 .choice-options { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
@@ -215,6 +216,8 @@ input { accent-color: var(--accent); }
 .range-control input { width: 100%; min-height: 30px; margin: .22rem 0 0; }
 .swatch, .toggle { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: .45rem; font-weight: 600; }
 .swatch input { width: 48px; height: 38px; border: 1px solid var(--line); border-radius: .5rem; padding: 3px; background: var(--surface); cursor: pointer; }
+[data-effect-panel="sine-wave"] .swatch input,
+[data-effect-panel="cipher"] .swatch input { flex: 0 0 44px; height: 44px; }
 .palette-swatches {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 2.75rem), 1fr));
@@ -292,6 +295,13 @@ input { accent-color: var(--accent); }
   letter-spacing: .055em;
   white-space: nowrap;
 }
+.sample-sine-wave { color: #82dcff; }
+.sample-sine-wave span { display: inline-block; }
+.sample-sine-wave span:nth-child(2) { transform: translateY(-.15em); }
+.sample-sine-wave span:nth-child(3) { transform: translateY(.1em); }
+.sample-sine-wave span:nth-child(4) { transform: translateY(.2em); }
+.sample-cipher { color: #bbffe4; }
+.sample-cipher span { color: #80b4d2; }
 .sample-marquee { color: #bdfb89; }
 .sample-marquee span { color: #77af55; }
 .sample-gradient { background: linear-gradient(100deg, #182739, #322143); color: #edc2fd; }

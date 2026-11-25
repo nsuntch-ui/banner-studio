@@ -39,6 +39,7 @@ const gradientDirection = document.querySelector("#gradient-direction");
 const gradientPulseOption = document.querySelector('#gradient-direction option[value="color-pulse"]');
 const waveAnchorField = document.querySelector("#wave-anchor-field");
 const waveAnchor = document.querySelector("#wave-anchor");
+const sineCounterFields = document.querySelector("#sine-counter-fields");
 const multiColorCount = document.querySelector("#multi-color-count");
 const extraSwatches = ["third", "fourth", "fifth"].map(slot => document.querySelector("#multi-color-" + slot));
 const multiColorPattern = document.querySelector("#multi-color-pattern");
@@ -75,7 +76,8 @@ const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPa
 const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500, waveAnchor: "text" };
 const choiceBindings = [];
 const palettePresets = [];
-const expandedEffects = ["rainbow-wave", "multi-color"];
+const expandedEffects = ["rainbow-wave", "multi-color", "sine-wave", "cipher"];
+const secondsSettings = ["pulseMs", "decodeMs", "holdMs"];
 
 let activeEffect;
 let draft = readEditor();
@@ -223,6 +225,11 @@ function startAnimation(state) {
     passWait: null,
     rainbowPhase: 0,
     colorPulsePhase: 0,
+    sinePhase: 0,
+    counterPhase: 0,
+    cipherProgress: 0,
+    cipherHold: 0,
+    scramblePhase: 0,
     typed: 0,
     holdTime: 0,
   };
@@ -442,6 +449,7 @@ function updateEditor() {
   if (marqueeColorField) marqueeColorField.hidden = rainbow;
   if (marqueeRainbowField) marqueeRainbowField.hidden = !rainbow;
   if (gradientPulseField) gradientPulseField.hidden = draft.settings.direction !== "color-pulse";
+  if (sineCounterFields) sineCounterFields.hidden = draft.settings.sineStyle !== "counter";
   if (multiColorCount?.options) {
     const maximum = supportsFiveColors() ? 5 : 3;
     for (const option of multiColorCount.options) {
@@ -465,7 +473,8 @@ function updateEditor() {
   for (const panel of effectPanels) {
     panel.hidden = panel.dataset.effectPanel !== draft.effect;
     for (const range of panel.querySelectorAll("input[type=range]")) {
-      const value = range.dataset.setting === "pulseMs" ? `${range.valueAsNumber / 1000} s` : range.value + range.dataset.unit;
+      const value = secondsSettings.includes(range.dataset.setting)
+        ? `${range.valueAsNumber / 1000} s` : range.value + range.dataset.unit;
       panel.querySelector(`output[for="${range.id}"]`).value = value;
       range.setAttribute("aria-valuetext", value);
     }
@@ -752,14 +761,17 @@ function pixel(x, y, color, light) {
   context.fillRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
 }
 
-function drawText(text, start, getColor, light) {
+function drawText(text, start, getColor, light, shifts) {
   for (let index = 0; index < text.length; index++) {
     const left = start + index * 6;
     if (left + 5 <= 0 || left >= width) continue;
     const glyph = bannerFont[text[index]] ?? bannerFont["?"];
     for (let x = 0; x < glyph.length; x++) {
+      const column = left + x;
+      if (column < 0 || column >= width || !glyph[x]) continue;
+      const shift = shifts?.[column] ?? 0;
       for (let y = 0; y < height; y++) {
-        if (glyph[x] & (1 << y)) pixel(left + x, y, getColor(left + x, y, index), light);
+        if (glyph[x] & (1 << y)) pixel(column, Math.min(height - 1, y + shift), getColor(column, y, index), light);
       }
     }
   }
@@ -851,6 +863,15 @@ function advanceAnimation(state, elapsed) {
     animation.rainbowPhase = phase - Math.floor(phase);
   } else if (state.effect === "gradient") {
     animation.colorPulsePhase = (animation.colorPulsePhase + elapsed * 1000 / (state.settings.pulseMs ?? 2500)) % 1;
+  } else if (state.effect === "sine-wave") {
+    const { sineDirection, sineSpeed, counterSpeed } = state.settings;
+    const direction = sineDirection === "left" ? 1 : -1;
+    const phase = animation.sinePhase + direction * elapsed * sineSpeed / 60;
+    const counter = animation.counterPhase - direction * elapsed * counterSpeed / 60;
+    animation.sinePhase = phase - Math.floor(phase);
+    animation.counterPhase = counter - Math.floor(counter);
+  } else if (state.effect === "cipher") {
+    advanceCipher(state.settings, elapsed);
   }
   if (state.motion.speed > 0) {
     if (state.motion.repeat === "pause" && state.motion.direction !== "bounce") {
@@ -872,11 +893,76 @@ function advanceAnimation(state, elapsed) {
   }
 }
 
+function advanceCipher(settings, elapsed) {
+  const duration = settings.decodeMs / 1000;
+  const untilDecoded = (1 - animation.cipherProgress) * duration;
+  let decoding = Math.min(elapsed, untilDecoded);
+  animation.cipherProgress = elapsed >= untilDecoded ? 1 : animation.cipherProgress + decoding / duration;
+  if (animation.cipherProgress === 1) {
+    const holdBudget = elapsed - decoding;
+    const untilRestart = Math.max(0, settings.holdMs / 1000 - animation.cipherHold);
+    if (holdBudget >= untilRestart) {
+      const nextDecode = holdBudget - untilRestart;
+      decoding += nextDecode;
+      animation.cipherProgress = nextDecode / duration;
+      animation.cipherHold = 0;
+    } else {
+      animation.cipherHold += holdBudget;
+    }
+  }
+  animation.scramblePhase = (animation.scramblePhase + decoding * settings.scrambleRate) % 240;
+}
+
 function rainbowColor(hue) {
   return [5, 3, 1].map(offset => {
     const channelPhase = (hue * 6 + offset) % 6;
     return 255 * (1 - Math.max(0, Math.min(channelPhase, 4 - channelPhase, 1)));
   });
+}
+
+function drawSineWave(text, left, light, settings) {
+  const color = rgb(settings.color);
+  const shades = [];
+  const shifts = [];
+  const fullTurn = 2 * Math.PI;
+  for (let x = Math.max(0, left); x < Math.min(width, left + textWidth(text)); x++) {
+    const relative = (x - left) / settings.sineWidth;
+    let wave = Math.sin(fullTurn * (relative + animation.sinePhase));
+    if (settings.sineStyle === "ripple") {
+      wave = 0.72 * wave + 0.28 * Math.sin(fullTurn * (2 * relative - animation.sinePhase));
+    }
+    shifts[x] = Math.round(settings.sineDepth * (0.5 + 0.5 * wave));
+    if (settings.sineStyle === "counter") {
+      const mix = settings.counterStrength / 100 * (0.5 + 0.5 * Math.cos(fullTurn * (relative + animation.counterPhase)));
+      shades[x] = color.map(channel => channel + (255 - channel) * mix);
+    }
+  }
+  drawText(text, left, x => shades[x] ?? color, light, shifts);
+}
+
+const cipherPools = { symbols: "?!*:.-", hex: "0123456789ABCDEF", digits: "0123456789" };
+
+function drawCipher(text, left, light, settings) {
+  const count = text.replaceAll(" ", "").length;
+  const completed = Math.floor(animation.cipherProgress * count);
+  const resolved = rgb(settings.color);
+  const scrambled = rgb(settings.scrambleColor);
+  const pool = cipherPools[settings.cipherSymbols];
+  const step = Math.floor(animation.scramblePhase);
+  const colors = [];
+  let index = 0;
+  const shown = Array.from(text, (glyph, position) => {
+    if (glyph === " ") return glyph;
+    const opposite = count - 1 - index;
+    const rank = settings.cipherOrder === "outside-in" ? Math.min(2 * index, 2 * opposite + 1)
+      : settings.cipherOrder === "reverse" ? opposite : index;
+    const locked = rank < completed;
+    colors[position] = locked ? resolved : scrambled;
+    const symbol = pool[(index * 7 + step) % pool.length];
+    index++;
+    return locked ? glyph : symbol;
+  }).join("");
+  drawText(shown, left, (_, __, position) => colors[position], light);
 }
 
 function drawEffect(text, state) {
@@ -929,6 +1015,14 @@ function drawEffect(text, state) {
       return colors[mirror && step >= count ? period - step : step];
     });
     drawText(text, left, (_, __, index) => letters[index], light);
+    return;
+  }
+  if (effect === "sine-wave") {
+    drawSineWave(text, left, light, settings);
+    return;
+  }
+  if (effect === "cipher") {
+    drawCipher(text, left, light, settings);
     return;
   }
 
