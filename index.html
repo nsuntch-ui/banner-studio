@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Banner Studio</title>
-  <link rel="stylesheet" href="styles.css?v=3963459ba144">
+  <link rel="stylesheet" href="styles.css?v=8481f599bbd6">
   <script defer src="font.js?v=81ff6526cd90"></script>
-  <script defer src="device.js?v=c6005ed1ce61"></script>
-  <script defer src="editor.js?v=2b1a6ffd6a75"></script>
+  <script defer src="device.js?v=eebe9ce635ce"></script>
+  <script defer src="editor.js?v=50338ca78a26"></script>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="theme-color" content="#0e120f">
@@ -61,7 +61,16 @@
         </fieldset>
 
         <div class="effect-controls" data-effect-panel="marquee" data-scroll-default="18">
-          <label class="field color short-field">Text color<input data-setting="color" type="color" value="#aaff73"></label>
+          <div class="fields color-fields">
+            <label class="field short-field" id="marquee-color-mode-field" hidden>Color style
+              <select id="marquee-color-mode" data-setting="colorMode"><option value="solid">Solid</option><option value="rainbow">Rainbow</option></select>
+            </label>
+            <label class="field color short-field" id="marquee-color-field">Text color<input data-setting="color" type="color" value="#aaff73"></label>
+          </div>
+          <div id="marquee-rainbow-field" hidden>
+            <div class="range-label"><label for="marquee-color-speed">Rainbow speed</label><output for="marquee-color-speed">24 cycles/min</output></div>
+            <input id="marquee-color-speed" data-setting="colorSpeed" data-unit=" cycles/min" type="range" min="0" max="60" step="1" value="24">
+          </div>
         </div>
 
         <div class="effect-controls" data-effect-panel="gradient" data-scroll-default="0" hidden>
@@ -70,8 +79,12 @@
             <label class="field color">End color<input data-setting="end" type="color" value="#ed83ff"></label>
           </div>
           <div class="fields inline-fields">
-            <label class="field">Gradient direction<select data-setting="direction"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
-            <label class="checkbox"><input data-setting="pulse" type="checkbox"> Breathing pulse</label>
+            <label class="field">Gradient style<select id="gradient-direction" data-setting="direction"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option><option value="color-pulse">Color Pulse</option></select></label>
+            <label class="checkbox"><input data-setting="pulse" type="checkbox"> Brightness breathing</label>
+          </div>
+          <div id="gradient-pulse-field" hidden>
+            <div class="range-label"><label for="gradient-pulse-ms">Color cycle time</label><output for="gradient-pulse-ms">2.5 s</output></div>
+            <input id="gradient-pulse-ms" data-setting="pulseMs" type="range" min="500" max="10000" step="250" value="2500">
           </div>
         </div>
 
@@ -89,8 +102,15 @@
             <label class="range-label" for="scroll-speed">Scroll speed <output id="scroll-speed-value" for="scroll-speed">18 px/s</output></label>
             <input id="scroll-speed" type="range" min="0" max="100" value="18">
           </div>
-          <label class="field short-field" id="scroll-direction-field">Scroll direction<select id="scroll-direction"><option value="left">Scroll left</option><option value="right">Scroll right</option><option value="bounce">Bounce</option></select></label>
-          <label class="field short-field" id="alignment-field" hidden>Text alignment<select id="alignment"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label>
+          <div class="fields motion-fields">
+            <label class="field short-field" id="scroll-direction-field">Scroll direction<select id="scroll-direction"><option value="left">Scroll left</option><option value="right">Scroll right</option><option value="bounce">Bounce</option></select></label>
+            <label class="field short-field" id="repeat-options" hidden>Repeat<select id="repeat-mode"><option value="continuous">Continuous</option><option value="pause">With pause</option></select></label>
+            <label class="field short-field" id="alignment-field" hidden>Text alignment<select id="alignment"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></label>
+          </div>
+          <div id="repeat-pause-field" hidden>
+            <div class="range-label"><label for="repeat-pause">Pause between passes</label><output id="repeat-pause-value" for="repeat-pause">1.5 s</output></div>
+            <input id="repeat-pause" type="range" min="250" max="12000" step="250" value="1500">
+          </div>
           <p class="hint" id="clip-note" hidden>Text that extends beyond the display is cropped.</p>
         </div>
       </section>

@@ -6,7 +6,7 @@ const bannerDevice = (() => {
   const effects = {
     marquee: { color: /^#[0-9a-f]{6}$/i },
     gradient: { start: /^#[0-9a-f]{6}$/i, end: /^#[0-9a-f]{6}$/i,
-      direction: /^(horizontal|vertical)$/, pulse: /^(true|false)$/ },
+      direction: /^(horizontal|vertical|color-pulse)$/, pulse: /^(true|false)$/ },
     typewriter: { color: /^#[0-9a-f]{6}$/i, cursor: /^(block|underline|star|hidden)$/,
       speed: /^(?:[1-9]|1[0-5])$/ },
   };
@@ -32,10 +32,17 @@ const bannerDevice = (() => {
       message: config.message, effect: config.effect, brightness: config.brightness,
       enabled: Number(config.enabled), allCaps: Number(config.allCaps ?? true), scrollSpeed: config.motion.speed,
       scrollDirection: config.motion.direction, alignment: config.motion.alignment,
+      repeat: config.motion.repeat ?? "continuous", pauseMs: config.motion.pauseMs ?? 1500,
     });
     for (const name of Object.keys(effects[config.effect])) {
       const value = config.settings[name];
       data.set(name, typeof value === "boolean" ? Number(value) : value);
+    }
+    if (config.effect === "marquee") {
+      data.set("colorMode", config.settings.colorMode ?? "solid");
+      data.set("colorSpeed", config.settings.colorSpeed ?? 24);
+    } else if (config.effect === "gradient") {
+      data.set("pulseMs", config.settings.pulseMs ?? 2500);
     }
     return data;
   }
@@ -44,11 +51,16 @@ const bannerDevice = (() => {
     return Number.isInteger(value) && value >= min && value <= max;
   }
 
+  function interval(value, min, max) {
+    return range(value, min, max) && value % 250 === 0;
+  }
+
   function checkState(state) {
     const config = state?.config;
     const motion = config?.motion;
     const settings = config?.settings;
     const spec = config && Object.hasOwn(effects, config.effect) ? effects[config.effect] : null;
+    const features = Array.isArray(state?.features) ? state.features : [];
     if (state?.version !== 1 || state.width !== 64 || state.height !== 8 ||
         typeof state.instance !== "string" || !range(state.revision, 0, 4294967295) ||
         !["pending", "saved", "failed"].includes(state.save) ||
@@ -59,8 +71,14 @@ const bannerDevice = (() => {
         !range(motion.speed, 0, config.effect === "typewriter" ? 0 : 100) ||
         !["left", "right", "bounce"].includes(motion.direction) ||
         !["left", "center", "right"].includes(motion.alignment) ||
+        (features.includes("repeat") &&
+          (!["continuous", "pause"].includes(motion.repeat) || !interval(motion.pauseMs, 250, 12000))) ||
         !Object.entries(spec).every(([name, pattern]) => pattern.test(settings[name])) ||
+        (config.effect === "marquee" && features.includes("marquee-rainbow") &&
+          (!["solid", "rainbow"].includes(settings.colorMode) || !range(settings.colorSpeed, 0, 60))) ||
         (config.effect === "gradient" && typeof settings.pulse !== "boolean") ||
+        (config.effect === "gradient" && features.includes("gradient-color-pulse") &&
+          !interval(settings.pulseMs, 500, 10000)) ||
         (config.effect === "typewriter" && typeof settings.speed !== "number")) {
       throw new Error("This banner returned an unsupported display state.");
     }
@@ -136,6 +154,16 @@ const bannerDevice = (() => {
   function put(device, base, config) {
     const body = fields(config);
     if (base.config.allCaps === undefined) body.delete("allCaps");
+    const features = base.features ?? [];
+    if (!features.includes("repeat")) {
+      body.delete("repeat");
+      body.delete("pauseMs");
+    }
+    if (!features.includes("marquee-rainbow")) {
+      body.delete("colorMode");
+      body.delete("colorSpeed");
+    }
+    if (!features.includes("gradient-color-pulse")) body.delete("pulseMs");
     body.set("instance", base.instance);
     body.set("revision", base.revision);
     return request(device.origin, "/api/v1/display", {

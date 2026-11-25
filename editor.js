@@ -26,6 +26,17 @@ const scrollSpeed = document.querySelector("#scroll-speed");
 const scrollSpeedValue = document.querySelector("#scroll-speed-value");
 const scrollDirection = document.querySelector("#scroll-direction");
 const alignment = document.querySelector("#alignment");
+const repeatOptions = document.querySelector("#repeat-options");
+const repeatMode = document.querySelector("#repeat-mode");
+const repeatPauseField = document.querySelector("#repeat-pause-field");
+const repeatPause = document.querySelector("#repeat-pause");
+const repeatPauseValue = document.querySelector("#repeat-pause-value");
+const marqueeColorModeField = document.querySelector("#marquee-color-mode-field");
+const marqueeColorField = document.querySelector("#marquee-color-field");
+const marqueeRainbowField = document.querySelector("#marquee-rainbow-field");
+const gradientPulseField = document.querySelector("#gradient-pulse-field");
+const gradientDirection = document.querySelector("#gradient-direction");
+const gradientPulseOption = document.querySelector('#gradient-direction option[value="color-pulse"]');
 const scrollOptions = document.querySelector("#scroll-options");
 const scrollDirectionField = document.querySelector("#scroll-direction-field");
 const alignmentField = document.querySelector("#alignment-field");
@@ -54,7 +65,9 @@ const localOrigin = location.protocol === "http:" ? bannerDevice.address(locatio
 const effectPanels = [...document.querySelectorAll("[data-effect-panel]")];
 const motionByEffect = new Map(effectPanels.map(panel => [panel.dataset.effectPanel, {
   speed: Number(panel.dataset.scrollDefault ?? 0), direction: "left", alignment: "center",
+  repeat: "continuous", pauseMs: 1500,
 }]));
+const effectDefaults = { colorMode: "solid", colorSpeed: 24, pulseMs: 2500 };
 
 let activeEffect;
 let draft = readEditor();
@@ -143,6 +156,9 @@ function startAnimation(state) {
     time: 0,
     textX: alignedTextX(state),
     bounceDirection: 1,
+    passWait: null,
+    rainbowPhase: 0,
+    colorPulsePhase: 0,
     typed: 0,
     holdTime: 0,
   };
@@ -156,10 +172,13 @@ function readEditor() {
     scrollSpeed.value = motion.speed;
     scrollDirection.value = motion.direction;
     alignment.value = motion.alignment;
+    if (repeatMode) repeatMode.value = motion.repeat;
+    if (repeatPause) repeatPause.value = motion.pauseMs;
     activeEffect = effect;
   }
   const scrollable = panel.dataset.scrollDefault !== undefined;
-  const motion = { speed: scrollable ? scrollSpeed.valueAsNumber : 0, direction: scrollDirection.value, alignment: alignment.value };
+  const motion = { speed: scrollable ? scrollSpeed.valueAsNumber : 0, direction: scrollDirection.value,
+    alignment: alignment.value, repeat: repeatMode?.value || "continuous", pauseMs: repeatPause?.valueAsNumber || 1500 };
   motionByEffect.set(effect, motion);
   scrollOptions.hidden = !scrollable;
   const settings = {};
@@ -191,11 +210,11 @@ function setControls(config) {
   enabled.checked = config.enabled;
   if (allCaps) allCaps.checked = config.allCaps ?? true;
   editor.querySelector(`input[name=effect][value="${config.effect}"]`).checked = true;
-  motionByEffect.set(config.effect, config.motion);
+  motionByEffect.set(config.effect, { repeat: "continuous", pauseMs: 1500, ...config.motion });
   activeEffect = undefined;
   const panel = effectPanels.find(section => section.dataset.effectPanel === config.effect);
   for (const input of panel.querySelectorAll("[data-setting]")) {
-    const value = config.settings[input.dataset.setting];
+    const value = config.settings[input.dataset.setting] ?? effectDefaults[input.dataset.setting];
     if (input.type === "checkbox") input.checked = value;
     else input.value = value;
   }
@@ -292,12 +311,27 @@ function updateStatus(valid, dirty) {
 }
 
 function updateEditor() {
-  const previousEffect = previewState().effect;
+  const previous = previewState();
+  const features = deviceState?.features ?? [];
+  const canRepeat = !device || features.includes("repeat");
+  const canRainbow = !device || features.includes("marquee-rainbow");
+  const canColorPulse = !device || features.includes("gradient-color-pulse");
+  if (gradientPulseOption) {
+    gradientPulseOption.hidden = !canColorPulse;
+    gradientPulseOption.disabled = !canColorPulse;
+    if (!canColorPulse && gradientDirection.value === "color-pulse") gradientDirection.value = "horizontal";
+  }
   if (allCapsOption) {
     allCapsOption.hidden = Boolean(device && deviceState.config.allCaps === undefined);
     if (allCapsOption.hidden) allCaps.checked = true;
   }
   draft = readEditor();
+  if (!canRepeat) Object.assign(draft.motion, { repeat: "continuous", pauseMs: 1500 });
+  if (draft.effect === "marquee" && !canRainbow) {
+    Object.assign(draft.settings, { colorMode: "solid", colorSpeed: 24 });
+  } else if (draft.effect === "gradient" && !canColorPulse) {
+    draft.settings.pulseMs = 2500;
+  }
   const valid = validMessage(draft.message);
   message.setAttribute("aria-invalid", String(!valid));
   messageError.hidden = valid;
@@ -309,11 +343,25 @@ function updateEditor() {
   scrollDirectionField.hidden = stationary;
   alignmentField.hidden = !stationary;
   clipNote.hidden = !stationary || !valid || textWidth(draft.message) <= width;
+  const showRepeat = canRepeat && !stationary && draft.motion.direction !== "bounce";
+  if (repeatOptions) repeatOptions.hidden = !showRepeat;
+  if (repeatPauseField) repeatPauseField.hidden = !showRepeat || draft.motion.repeat !== "pause";
+  if (repeatPause && repeatPauseValue) {
+    repeatPauseValue.value = `${draft.motion.pauseMs / 1000} s`;
+    repeatPause.setAttribute("aria-valuetext", repeatPauseValue.value);
+  }
+  const rainbow = draft.effect === "marquee" && draft.settings.colorMode === "rainbow";
+  if (marqueeColorModeField) marqueeColorModeField.hidden = !canRainbow;
+  if (marqueeColorField) marqueeColorField.hidden = rainbow;
+  if (marqueeRainbowField) marqueeRainbowField.hidden = !rainbow;
+  if (gradientPulseField) gradientPulseField.hidden = draft.settings.direction !== "color-pulse";
 
   for (const panel of effectPanels) {
     panel.hidden = panel.dataset.effectPanel !== draft.effect;
     for (const range of panel.querySelectorAll("input[type=range]")) {
-      panel.querySelector(`output[for="${range.id}"]`).value = range.value + range.dataset.unit;
+      const value = range.dataset.setting === "pulseMs" ? `${range.valueAsNumber / 1000} s` : range.value + range.dataset.unit;
+      panel.querySelector(`output[for="${range.id}"]`).value = value;
+      range.setAttribute("aria-valuetext", value);
     }
   }
 
@@ -335,9 +383,17 @@ function updateEditor() {
   connection.textContent = online ? "Simulate disconnect" : "Simulate reconnect";
   pause.textContent = paused ? "Play preview" : "Pause preview";
   const display = previewState();
-  if (display.effect !== previousEffect) animation = startAnimation(display);
+  if (display.effect !== previous.effect) animation = startAnimation(display);
   // At zero speed the user controls placement. Resuming starts at that position.
-  if (display.motion.speed === 0) animation.textX = alignedTextX(display);
+  if (display.motion.speed === 0) {
+    animation.textX = alignedTextX(display);
+    animation.passWait = null;
+  } else if (animation.passWait !== null &&
+      (display.motion.repeat !== "pause" || previous.motion.direction !== display.motion.direction)) {
+    animation.passWait = null;
+    if (display.motion.direction === "left") animation.textX = width;
+    else if (display.motion.direction === "right") animation.textX = -textWidth(display.message);
+  }
   canvas.setAttribute("aria-label", `64 by 8 preview, ${display.enabled ? display.message : "display off"}`);
   paint();
 }
@@ -582,7 +638,7 @@ function drawText(text, start, getColor, light) {
     const glyph = bannerFont[text[index]] ?? bannerFont["?"];
     for (let x = 0; x < glyph.length; x++) {
       for (let y = 0; y < height; y++) {
-        if (glyph[x] & (1 << y)) pixel(left + x, y, getColor(left + x, y), light);
+        if (glyph[x] & (1 << y)) pixel(left + x, y, getColor(left + x, y, index), light);
       }
     }
   }
@@ -640,10 +696,43 @@ function advanceScroll(state, elapsed) {
   animation.bounceDirection = next < span ? 1 : -1;
 }
 
+function advanceRepeatedScroll(state, elapsed) {
+  const { direction, speed, pauseMs } = state.motion;
+  const length = textWidth(state.message);
+  const leftward = direction === "left";
+  const stepDirection = leftward ? -1 : 1;
+  animation.bounceDirection = stepDirection;
+  if (animation.passWait !== null) {
+    animation.passWait += elapsed;
+    const duration = pauseMs / 1000;
+    if (animation.passWait < duration) return;
+    elapsed = Math.min(elapsed, animation.passWait - duration);
+    animation.passWait = null;
+    animation.textX = leftward ? width : -length;
+  }
+  const edge = leftward ? -length : width;
+  const untilExit = Math.max(0, (edge - animation.textX) * stepDirection) / speed;
+  if (elapsed < untilExit) {
+    animation.textX += stepDirection * speed * elapsed;
+  } else {
+    animation.textX = edge;
+    animation.passWait = elapsed - untilExit;
+  }
+}
+
 function advanceAnimation(state, elapsed) {
   animation.time += elapsed;
+  if (state.effect === "marquee") {
+    animation.rainbowPhase = (animation.rainbowPhase + elapsed * (state.settings.colorSpeed ?? 24) / 60) % 1;
+  } else if (state.effect === "gradient") {
+    animation.colorPulsePhase = (animation.colorPulsePhase + elapsed * 1000 / (state.settings.pulseMs ?? 2500)) % 1;
+  }
   if (state.motion.speed > 0) {
-    advanceScroll(state, elapsed);
+    if (state.motion.repeat === "pause" && state.motion.direction !== "bounce") {
+      advanceRepeatedScroll(state, elapsed);
+    } else {
+      advanceScroll(state, elapsed);
+    }
   } else if (state.effect === "typewriter" && state.message.length > 0) {
     if (animation.typed < state.message.length) {
       animation.typed = Math.min(state.message.length, animation.typed + elapsed * state.settings.speed);
@@ -658,14 +747,26 @@ function advanceAnimation(state, elapsed) {
   }
 }
 
+function rainbowColor(hue) {
+  return [5, 3, 1].map(offset => {
+    const channelPhase = (hue * 6 + offset) % 6;
+    return 255 * (1 - Math.max(0, Math.min(channelPhase, 4 - channelPhase, 1)));
+  });
+}
+
 function drawEffect(text, state) {
   const { settings, effect } = state;
   const light = state.brightness / 100;
   const left = Math.floor(animation.textX);
 
   if (effect === "marquee") {
-    const color = rgb(settings.color);
-    drawText(text, left, () => color, light);
+    if (settings.colorMode === "rainbow") {
+      const colors = Array.from(text, (_, index) => rainbowColor(animation.rainbowPhase + index / 12));
+      drawText(text, left, (_, __, index) => colors[index], light);
+    } else {
+      const color = rgb(settings.color);
+      drawText(text, left, () => color, light);
+    }
     return;
   }
   if (effect === "gradient") {
@@ -673,8 +774,10 @@ function drawEffect(text, state) {
     const end = rgb(settings.end);
     const colorSpan = Math.max(textWidth(text) - 1, 1);
     const pulse = settings.pulse ? 0.65 + 0.35 * Math.cos(animation.time * 2) : 1;
+    const colorPulse = settings.direction === "color-pulse"
+      ? (1 - Math.cos(animation.colorPulsePhase * 2 * Math.PI)) / 2 : null;
     drawText(text, left, (x, y) => {
-      const ratio = settings.direction === "vertical" ? Math.min(y / 6, 1) : (x - left) / colorSpan;
+      const ratio = colorPulse ?? (settings.direction === "vertical" ? Math.min(y / 6, 1) : (x - left) / colorSpan);
       return start.map((component, index) => component + (end[index] - component) * ratio);
     }, light * pulse);
     return;
@@ -708,7 +811,7 @@ function paint() {
 
   const display = previewState();
   const text = display.allCaps ? display.message.toUpperCase() : display.message;
-  if (display.enabled && display.brightness > 0 && text.length) drawEffect(text, display);
+  if (display.enabled && display.brightness > 0 && text.length && animation.passWait === null) drawEffect(text, display);
 }
 
 function animate(timestamp) {
