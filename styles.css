@@ -425,7 +425,6 @@ input { accent-color: var(--accent); }
 .device-form { display: grid; justify-items: start; gap: .65rem; margin-top: .65rem; }
 .device-fields { width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
 .device-form input { font: inherit; padding: 0 .65rem; }
-#offline-mode-address[aria-invalid="true"] { border-color: var(--error); }
 .device-feedback:not(:empty) { margin-top: .65rem; }
 .pairing-manual { width: 100%; }
 
@@ -457,6 +456,15 @@ input { accent-color: var(--accent); }
 .settings-section + .settings-section { border-top: 1px solid var(--border); }
 .settings-link { display: inline-flex; align-items: center; margin-top: .65rem; text-decoration: none; }
 .settings-link:focus-visible { outline-offset: 3px; }
+
+.offline-dialog { width: min(100% - 1.5rem, 26rem); }
+.offline-steps { margin: 0; padding-inline-start: 1.3rem; color: var(--muted); }
+.offline-steps li + li { margin-top: .4rem; }
+.offline-steps strong { color: var(--ink); overflow-wrap: anywhere; }
+.offline-links { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem .85rem; margin-top: .9rem; }
+.offline-direct-link, .offline-lan-link { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.offline-direct-link { background: var(--selected); color: var(--selected-ink); border-color: var(--highlight-border); font-weight: 650; text-decoration: none; }
+.offline-lan-link { color: var(--ink); font-size: .875rem; text-underline-offset: .2em; }
 
 .appearance-fields { grid-template-columns: 1fr; gap: .9rem; margin-top: .55rem; }
 .fields { display: grid; gap: .65rem; }
